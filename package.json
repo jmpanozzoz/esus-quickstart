@@ -1,0 +1,31 @@
+{
+  "name": "esus-quickstart",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Batteries-included Next.js 15 sample for the Esus BaaS API — tenant auth, FHIR data plane, patient hub, appointments, encounters, and a clean sidebar shell to build on.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "pages:build": "npx @cloudflare/next-on-pages",
+    "pages:dev": "wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat",
+    "pages:deploy": "npm run pages:build && wrangler pages deploy .vercel/output/static"
+  },
+  "dependencies": {
+    "next": "^15.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/next-on-pages": "^1.13.7",
+    "@types/node": "^22.7.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.14",
+    "typescript": "^5.6.3",
+    "wrangler": "^3.86.0"
+  }
+}
