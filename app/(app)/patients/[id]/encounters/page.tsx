@@ -7,16 +7,12 @@ export const runtime = "edge";
 
 export default async function PatientEncountersPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  // The API enforces a consent gate on `?subject=Patient/<id>` for PHI
-  // searches. The api-client role can't satisfy that without an admin
-  // role, so we fetch the tenant-wide encounter set and filter here.
-  // For higher-volume tenants you'd grant the key broader access or
-  // store a consent record per (clinician, patient).
   const bundle = await fhirSearch<Encounter>("Encounter", {
-    _count: 200,
+    subject: id,
+    _count: 50,
     _sort: "-_lastUpdated",
   });
-  const rows = entries(bundle).filter((e) => e.subject?.reference === `Patient/${id}`);
+  const rows = entries(bundle);
 
   if (rows.length === 0) {
     return (

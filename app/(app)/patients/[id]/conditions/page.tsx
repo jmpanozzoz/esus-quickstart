@@ -11,8 +11,12 @@ export const runtime = "edge";
 
 export default async function ConditionsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const bundle = await fhirSearch<Condition>("Condition", { _count: 200, _sort: "-_lastUpdated" });
-  const rows = entries(bundle).filter((c) => c.subject?.reference === `Patient/${id}`);
+  const bundle = await fhirSearch<Condition>("Condition", {
+    subject: id,
+    _count: 50,
+    _sort: "-_lastUpdated",
+  });
+  const rows = entries(bundle);
 
   return (
     <div className="space-y-4">

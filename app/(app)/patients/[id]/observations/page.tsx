@@ -7,8 +7,12 @@ export const runtime = "edge";
 
 export default async function ObservationsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const bundle = await fhirSearch<Observation>("Observation", { _count: 200, _sort: "-_lastUpdated" });
-  const rows = entries(bundle).filter((o) => o.subject?.reference === `Patient/${id}`);
+  const bundle = await fhirSearch<Observation>("Observation", {
+    subject: id,
+    _count: 50,
+    _sort: "-_lastUpdated",
+  });
+  const rows = entries(bundle);
 
   return (
     <div className="space-y-4">

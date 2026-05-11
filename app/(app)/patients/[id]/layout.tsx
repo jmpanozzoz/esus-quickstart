@@ -6,7 +6,7 @@
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { type FhirError, entries, fhirSearch } from "@/lib/fhir";
+import { type FhirError, fhirRead } from "@/lib/fhir";
 import {
   ageFromBirthDate,
   findTelecom,
@@ -48,10 +48,7 @@ export default async function PatientLayout({
   const { id } = await params;
   let patient: Patient;
   try {
-    const bundle = await fhirSearch<Patient>("Patient", { _id: id, _count: 1 });
-    const hit = entries(bundle)[0];
-    if (!hit) notFound();
-    patient = hit;
+    patient = await fhirRead<Patient>("Patient", id);
   } catch (err) {
     const e = err as FhirError;
     if (e.status === 404) notFound();

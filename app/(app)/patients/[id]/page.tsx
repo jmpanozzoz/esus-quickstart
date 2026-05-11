@@ -1,5 +1,4 @@
-import { entries, fhirSearch } from "@/lib/fhir";
-import { notFound } from "next/navigation";
+import { fhirRead } from "@/lib/fhir";
 import {
   formatAddress,
   formatGender,
@@ -28,9 +27,7 @@ interface Patient {
 
 export default async function PatientOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const bundle = await fhirSearch<Patient>("Patient", { _id: id, _count: 1 });
-  const patient = entries(bundle)[0];
-  if (!patient) notFound();
+  const patient = await fhirRead<Patient>("Patient", id);
 
   const phones = (patient.telecom ?? []).filter((t) => t.system === "phone");
   const emails = (patient.telecom ?? []).filter((t) => t.system === "email");
