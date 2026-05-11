@@ -88,6 +88,13 @@ export function login(email: string, password: string): Promise<TokenResponse> {
   });
 }
 
+export function refresh(refreshToken: string): Promise<TokenResponse> {
+  return call<TokenResponse>("/v1/auth/refresh", {
+    method: "POST",
+    body: JSON.stringify({ refreshToken }),
+  });
+}
+
 export interface MeResponse {
   id: string;
   email: string;
