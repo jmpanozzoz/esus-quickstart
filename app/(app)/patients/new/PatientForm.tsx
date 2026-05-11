@@ -12,7 +12,7 @@ import {
   TextInput,
 } from "../../_components/Field";
 
-interface FormState {
+export interface PatientFormState {
   given: string;
   family: string;
   gender: "" | "male" | "female" | "other" | "unknown";
@@ -34,7 +34,7 @@ interface FormState {
   active: boolean;
 }
 
-const empty: FormState = {
+const empty: PatientFormState = {
   given: "",
   family: "",
   gender: "",
@@ -52,27 +52,34 @@ const empty: FormState = {
   active: true,
 };
 
-const ID_SYSTEM_URI: Record<FormState["idSystem"], string> = {
+const ID_SYSTEM_URI: Record<PatientFormState["idSystem"], string> = {
   national_id: "urn:oid:2.16.840.1.113883.4.1",
   passport: "http://hl7.org/fhir/sid/passport",
   mrn: "urn:esus:mrn",
   other: "urn:esus:identifier",
 };
 
-const ID_SYSTEM_LABEL: Record<FormState["idSystem"], string> = {
+const ID_SYSTEM_LABEL: Record<PatientFormState["idSystem"], string> = {
   national_id: "National ID",
   passport: "Passport",
   mrn: "Medical Record Number",
   other: "Other",
 };
 
-export function PatientForm() {
+export interface PatientFormProps {
+  /** When set, the form is in edit mode — submits PUT /api/fhir/Patient/{id}. */
+  patientId?: string;
+  initialValues?: Partial<PatientFormState>;
+}
+
+export function PatientForm({ patientId, initialValues }: PatientFormProps = {}) {
   const router = useRouter();
-  const [form, setForm] = useState<FormState>(empty);
+  const mode: "create" | "edit" = patientId ? "edit" : "create";
+  const [form, setForm] = useState<PatientFormState>({ ...empty, ...initialValues });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  function update<K extends keyof FormState>(key: K, value: FormState[K]) {
+  function update<K extends keyof PatientFormState>(key: K, value: PatientFormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
@@ -119,18 +126,20 @@ export function PatientForm() {
     };
 
     try {
-      const res = await fetch("/api/fhir/Patient", {
-        method: "POST",
+      const url = patientId ? `/api/fhir/Patient/${patientId}` : "/api/fhir/Patient";
+      const method = patientId ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(resource),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        const diag = body?.issue?.[0]?.diagnostics ?? body?.error ?? `Create failed (${res.status})`;
+        const diag = body?.issue?.[0]?.diagnostics ?? body?.error ?? `${patientId ? "Save" : "Create"} failed (${res.status})`;
         setError(typeof diag === "string" ? diag : JSON.stringify(diag));
         return;
       }
-      router.push("/patients");
+      router.push(patientId ? `/patients/${patientId}` : "/patients");
       router.refresh();
     } finally {
       setSaving(false);
@@ -139,6 +148,14 @@ export function PatientForm() {
 
   return (
     <form onSubmit={onSubmit} className="max-w-3xl space-y-8">
+      {mode === "edit" ? (
+        <p className="rounded-md border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-600">
+          <strong className="font-medium text-neutral-800">Encrypted fields appear blank.</strong>{" "}
+          Document number, phone, and email are stored encrypted and aren't shown here. Leave them
+          blank to keep the current value, or type to replace.
+        </p>
+      ) : null}
+
       <FormSection title="Identity">
         <div className="grid grid-cols-2 gap-4">
           <Field label="Given name" required>
@@ -150,7 +167,7 @@ export function PatientForm() {
         </div>
         <div className="grid grid-cols-3 gap-4">
           <Field label="Gender">
-            <Select value={form.gender} onChange={(e) => update("gender", e.target.value as FormState["gender"])}>
+            <Select value={form.gender} onChange={(e) => update("gender", e.target.value as PatientFormState["gender"])}>
               <option value="">—</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
@@ -174,7 +191,7 @@ export function PatientForm() {
       <FormSection title="Document" hint="National ID, passport, or local medical record number.">
         <div className="grid grid-cols-[200px_1fr] gap-4">
           <Field label="Type">
-            <Select value={form.idSystem} onChange={(e) => update("idSystem", e.target.value as FormState["idSystem"])}>
+            <Select value={form.idSystem} onChange={(e) => update("idSystem", e.target.value as PatientFormState["idSystem"])}>
               <option value="national_id">National ID</option>
               <option value="passport">Passport</option>
               <option value="mrn">MRN</option>
@@ -248,7 +265,7 @@ export function PatientForm() {
 
       <div className="flex gap-3 border-t border-neutral-200 pt-6">
         <PrimaryButton type="submit" loading={saving}>
-          Create patient
+          {mode === "edit" ? "Save changes" : "Create patient"}
         </PrimaryButton>
         <SecondaryButton type="button" onClick={() => router.back()}>
           Cancel

@@ -86,12 +86,18 @@ export default async function PatientLayout({
               ) : null}
             </p>
           </div>
-          <div className="text-right text-xs text-neutral-500">
+          <div className="flex flex-col items-end gap-2 text-xs text-neutral-500">
+            <Link
+              href={`/patients/${id}/edit`}
+              className="rounded-md border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
+            >
+              Edit
+            </Link>
             <p>
               <span className="uppercase tracking-wider">{idLabel}</span>{" "}
               <span className="font-mono text-neutral-700">{idValue}</span>
             </p>
-            <p className="mt-1 font-mono">{patient.id?.slice(0, 8)}…</p>
+            <p className="font-mono">{patient.id?.slice(0, 8)}…</p>
           </div>
         </div>
 

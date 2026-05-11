@@ -35,7 +35,14 @@ export default async function PractitionersPage({ searchParams }: { searchParams
   const rows = entries(bundle);
 
   const columns: Column<Practitioner>[] = [
-    { header: "Name", cell: (p) => <span className="font-medium text-neutral-900">{formatName(p.name)}</span> },
+    {
+      header: "Name",
+      cell: (p) => (
+        <Link href={`/practitioners/${p.id}/edit`} className="font-medium text-neutral-900 hover:underline">
+          {formatName(p.name)}
+        </Link>
+      ),
+    },
     {
       header: "License",
       cell: (p) => <span className="font-mono text-xs text-neutral-600">{primaryIdentifier(p.identifier)}</span>,

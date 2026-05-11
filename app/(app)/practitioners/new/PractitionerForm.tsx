@@ -12,7 +12,7 @@ import {
   TextInput,
 } from "../../_components/Field";
 
-interface FormState {
+export interface PractitionerFormState {
   given: string;
   family: string;
   gender: "" | "male" | "female" | "other" | "unknown";
@@ -32,7 +32,7 @@ interface FormState {
   active: boolean;
 }
 
-const empty: FormState = {
+const empty: PractitionerFormState = {
   given: "",
   family: "",
   gender: "",
@@ -48,13 +48,19 @@ const empty: FormState = {
   active: true,
 };
 
-export function PractitionerForm() {
+export interface PractitionerFormProps {
+  practitionerId?: string;
+  initialValues?: Partial<PractitionerFormState>;
+}
+
+export function PractitionerForm({ practitionerId, initialValues }: PractitionerFormProps = {}) {
   const router = useRouter();
-  const [form, setForm] = useState<FormState>(empty);
+  const mode: "create" | "edit" = practitionerId ? "edit" : "create";
+  const [form, setForm] = useState<PractitionerFormState>({ ...empty, ...initialValues });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  function update<K extends keyof FormState>(key: K, value: FormState[K]) {
+  function update<K extends keyof PractitionerFormState>(key: K, value: PractitionerFormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
@@ -100,14 +106,17 @@ export function PractitionerForm() {
     };
 
     try {
-      const res = await fetch("/api/fhir/Practitioner", {
-        method: "POST",
+      const url = practitionerId ? `/api/fhir/Practitioner/${practitionerId}` : "/api/fhir/Practitioner";
+      const method = practitionerId ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(resource),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        const diag = body?.issue?.[0]?.diagnostics ?? body?.error ?? `Create failed (${res.status})`;
+        const diag =
+          body?.issue?.[0]?.diagnostics ?? body?.error ?? `${practitionerId ? "Save" : "Create"} failed (${res.status})`;
         setError(typeof diag === "string" ? diag : JSON.stringify(diag));
         return;
       }
@@ -120,6 +129,14 @@ export function PractitionerForm() {
 
   return (
     <form onSubmit={onSubmit} className="max-w-3xl space-y-8">
+      {mode === "edit" ? (
+        <p className="rounded-md border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-600">
+          <strong className="font-medium text-neutral-800">Encrypted fields appear blank.</strong>{" "}
+          License number, phone, and email are stored encrypted and aren't shown here. Leave them
+          blank to keep the current value, or type to replace.
+        </p>
+      ) : null}
+
       <FormSection title="Identity">
         <div className="grid grid-cols-2 gap-4">
           <Field label="Given name" required>
@@ -134,7 +151,7 @@ export function PractitionerForm() {
             <TextInput value={form.qualification} onChange={(e) => update("qualification", e.target.value)} />
           </Field>
           <Field label="Gender">
-            <Select value={form.gender} onChange={(e) => update("gender", e.target.value as FormState["gender"])}>
+            <Select value={form.gender} onChange={(e) => update("gender", e.target.value as PractitionerFormState["gender"])}>
               <option value="">—</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
@@ -198,7 +215,7 @@ export function PractitionerForm() {
 
       <div className="flex gap-3 border-t border-neutral-200 pt-6">
         <PrimaryButton type="submit" loading={saving}>
-          Create practitioner
+          {mode === "edit" ? "Save changes" : "Create practitioner"}
         </PrimaryButton>
         <SecondaryButton type="button" onClick={() => router.back()}>
           Cancel
