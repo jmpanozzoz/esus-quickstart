@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { fhirRead } from "@/lib/fhir";
+import { type FhirResource, fhirRead } from "@/lib/fhir";
 import { PatientForm, type PatientFormState } from "../../new/PatientForm";
 
 export const runtime = "edge";
 
-interface Patient {
+type Patient = FhirResource & {
   resourceType: "Patient";
-  id?: string;
   name?: { use?: string; family?: string; given?: string[] }[];
   identifier?: { use?: string; system?: string; value?: string }[];
   gender?: "male" | "female" | "other" | "unknown";
@@ -15,7 +14,7 @@ interface Patient {
   telecom?: { system?: string; value?: string; use?: string }[];
   address?: { line?: string[]; city?: string; state?: string; postalCode?: string; country?: string }[];
   active?: boolean;
-}
+};
 
 const SYSTEM_TO_FORM: Record<string, PatientFormState["idSystem"]> = {
   "urn:oid:2.16.840.1.113883.4.1": "national_id",
@@ -33,7 +32,7 @@ function buildInitial(p: Patient): Partial<PatientFormState> {
     gender: p.gender ?? "",
     birthDate: p.birthDate ?? "",
     maritalStatus: p.maritalStatus?.text ?? "",
-    idSystem: (ident?.system && SYSTEM_TO_FORM[ident.system]) ?? "national_id",
+    idSystem: ident?.system ? (SYSTEM_TO_FORM[ident.system] ?? "other") : "national_id",
     // PHI values come back as `***ENCRYPTED***`. Leave the input blank
     // so the user can leave it untouched (preserved on PUT) or replace.
     idValue: "",

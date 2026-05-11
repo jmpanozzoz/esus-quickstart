@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { entries, fhirSearch } from "@/lib/fhir";
+import { entries, type FhirResource, fhirSearch } from "@/lib/fhir";
 import { formatName, type HumanName } from "@/lib/fhir-helpers";
 import { AppointmentForm } from "./AppointmentForm";
 
 export const runtime = "edge";
 
-interface NamedResource {
-  id?: string;
+interface NamedResource extends FhirResource {
   name?: HumanName[];
 }
 

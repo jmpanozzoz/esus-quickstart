@@ -26,11 +26,11 @@ export interface FhirBundle<T = FhirResource> {
   entry?: { fullUrl?: string; resource: T }[];
 }
 
-export type FhirResource = {
+export interface FhirResource {
   resourceType: string;
   id?: string;
   meta?: { versionId?: string; lastUpdated?: string };
-} & Record<string, unknown>;
+}
 
 function authHeaders(): Record<string, string> {
   if (!API || !APP_ID || !KEY_ID || !KEY_SECRET) {

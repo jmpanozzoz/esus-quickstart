@@ -1,8 +1,11 @@
 node_modules/
 .next/
 out/
+.vercel/
+.wrangler/
 .env
 .env.local
+.dev.vars
 .DS_Store
 *.tsbuildinfo
 next-env.d.ts

@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { fhirRead } from "@/lib/fhir";
+import { type FhirResource, fhirRead } from "@/lib/fhir";
 import { PractitionerForm, type PractitionerFormState } from "../../new/PractitionerForm";
 
 export const runtime = "edge";
 
-interface Practitioner {
+type Practitioner = FhirResource & {
   resourceType: "Practitioner";
-  id?: string;
   name?: { use?: string; family?: string; given?: string[] }[];
   identifier?: { use?: string; system?: string; value?: string }[];
   gender?: "male" | "female" | "other" | "unknown";
@@ -14,7 +13,7 @@ interface Practitioner {
   address?: { line?: string[]; city?: string; state?: string; postalCode?: string; country?: string }[];
   qualification?: { code?: { text?: string } }[];
   active?: boolean;
-}
+};
 
 function buildInitial(p: Practitioner): Partial<PractitionerFormState> {
   const name = p.name?.find((n) => n.use === "official") ?? p.name?.[0];

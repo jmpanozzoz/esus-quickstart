@@ -55,8 +55,8 @@ export default async function DashboardPage() {
       _count: 5,
       _sort: "date",
     }).catch(() => emptyBundle),
-    fhirSearch<{ id?: string; name?: HumanName[] }>("Patient", { _count: 100 }).catch(() => emptyBundle),
-    fhirSearch<{ id?: string; name?: HumanName[] }>("Practitioner", { _count: 100 }).catch(() => emptyBundle),
+    fhirSearch<FhirResource & { name?: HumanName[] }>("Patient", { _count: 100 }).catch(() => emptyBundle),
+    fhirSearch<FhirResource & { name?: HumanName[] }>("Practitioner", { _count: 100 }).catch(() => emptyBundle),
   ]);
 
   const recent = entries(recentPatients);
