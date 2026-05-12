@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import { entries, fhirSearch, type FhirResource } from "@/lib/fhir";
+import { useSearchParams } from "next/navigation";
+import { TableSkeleton } from "../_components/Skeleton";
+import { entries, type FhirBundle, type FhirResource } from "@/lib/fhir";
 import {
   type Appointment,
   extractRef,
@@ -8,9 +12,8 @@ import {
   statusBadgeClass,
 } from "@/lib/fhir-appointment";
 import { formatName, type HumanName } from "@/lib/fhir-helpers";
+import { useFhirSearch } from "@/lib/use-fhir";
 import { CancelAppointmentButton } from "./_components/CancelAppointmentButton";
-
-export const runtime = "edge";
 
 const STATUS_TABS: { value: string; label: string }[] = [
   { value: "upcoming", label: "Upcoming" },
@@ -25,7 +28,7 @@ interface NamedResource extends FhirResource {
   name?: HumanName[];
 }
 
-function buildNameMap(bundle: { entry?: { resource: NamedResource }[] } | null | undefined): Map<string, string> {
+function buildNameMap(bundle: FhirBundle<NamedResource> | undefined): Map<string, string> {
   const map = new Map<string, string>();
   for (const e of bundle?.entry ?? []) {
     if (e.resource.id) map.set(e.resource.id, formatName(e.resource.name));
@@ -33,12 +36,9 @@ function buildNameMap(bundle: { entry?: { resource: NamedResource }[] } | null |
   return map;
 }
 
-export default async function AppointmentsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ status?: string }>;
-}) {
-  const { status = "upcoming" } = await searchParams;
+export default function AppointmentsPage() {
+  const searchParams = useSearchParams();
+  const status = searchParams.get("status") ?? "upcoming";
 
   const params: Record<string, string | number | undefined> = {
     _count: 50,
@@ -50,21 +50,25 @@ export default async function AppointmentsPage({
     params.status = status;
   }
 
-  const [appointmentsBundle, patientsBundle, practitionersBundle] = await Promise.all([
-    fhirSearch<Appointment>("Appointment", params),
-    fhirSearch<NamedResource>("Patient", { _count: 100 }),
-    fhirSearch<NamedResource>("Practitioner", { _count: 100 }),
-  ]);
+  // Three queries fire in parallel; the table only renders once all
+  // three resolve so we can render the joined names without "—" flicker.
+  // Skeleton stays put until then.
+  const appointments = useFhirSearch<Appointment>("Appointment", params);
+  const patients = useFhirSearch<NamedResource>("Patient", { _count: 100 });
+  const practitioners = useFhirSearch<NamedResource>("Practitioner", { _count: 100 });
 
-  const patientNames = buildNameMap(patientsBundle);
-  const practitionerNames = buildNameMap(practitionersBundle);
+  const ready = !!appointments.data && !!patients.data && !!practitioners.data;
+  const patientNames = buildNameMap(patients.data);
+  const practitionerNames = buildNameMap(practitioners.data);
 
   const CANCELLED = new Set(["cancelled", "noshow", "entered-in-error"]);
-  const rows = entries(appointmentsBundle).filter((a) => {
-    if (status !== "upcoming") return true;
-    if (!isUpcoming(a.start)) return false;
-    return !CANCELLED.has(a.status ?? "");
-  });
+  const rows = appointments.data
+    ? entries(appointments.data).filter((a) => {
+        if (status !== "upcoming") return true;
+        if (!isUpcoming(a.start)) return false;
+        return !CANCELLED.has(a.status ?? "");
+      })
+    : [];
 
   return (
     <div className="space-y-6">
@@ -72,8 +76,14 @@ export default async function AppointmentsPage({
         <div>
           <h1 className="text-2xl font-semibold text-neutral-900">Appointments</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {rows.length} {rows.length === 1 ? "appointment" : "appointments"}
-            {status !== "all" ? ` (${status})` : ""}.
+            {ready ? (
+              <>
+                {rows.length} {rows.length === 1 ? "appointment" : "appointments"}
+                {status !== "all" ? ` (${status})` : ""}.
+              </>
+            ) : (
+              "Loading…"
+            )}
           </p>
         </div>
         <Link
@@ -103,7 +113,13 @@ export default async function AppointmentsPage({
         })}
       </nav>
 
-      {rows.length === 0 ? (
+      {appointments.error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          Failed to load appointments: {appointments.error.message}
+        </div>
+      ) : !ready ? (
+        <TableSkeleton />
+      ) : rows.length === 0 ? (
         <div className="rounded-lg border border-neutral-200 bg-white p-6 text-sm">
           <p className="font-medium text-neutral-900">
             No appointments {status === "upcoming" ? "upcoming" : `with status "${status}"`}.

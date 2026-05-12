@@ -1,16 +1,19 @@
+"use client";
+
 import Link from "next/link";
-import { entries, fhirSearch, type FhirResource } from "@/lib/fhir";
+import { useSearchParams } from "next/navigation";
+import { TableSkeleton } from "../_components/Skeleton";
+import { entries, type FhirBundle, type FhirResource } from "@/lib/fhir";
+import { formatDateTime } from "@/lib/fhir-appointment";
 import {
-  type Encounter,
   classLabel,
   encounterStatusBadge,
   patientRefId,
   practitionerRefId,
+  type Encounter,
 } from "@/lib/fhir-encounter";
-import { formatDateTime } from "@/lib/fhir-appointment";
 import { formatName, type HumanName } from "@/lib/fhir-helpers";
-
-export const runtime = "edge";
+import { useFhirSearch } from "@/lib/use-fhir";
 
 const STATUS_TABS: { value: string; label: string }[] = [
   { value: "all", label: "All" },
@@ -25,7 +28,7 @@ interface NamedResource extends FhirResource {
   name?: HumanName[];
 }
 
-function nameMap(bundle: { entry?: { resource: NamedResource }[] } | null | undefined): Map<string, string> {
+function nameMap(bundle: FhirBundle<NamedResource> | undefined): Map<string, string> {
   const m = new Map<string, string>();
   for (const e of bundle?.entry ?? []) {
     if (e.resource.id) m.set(e.resource.id, formatName(e.resource.name));
@@ -33,24 +36,20 @@ function nameMap(bundle: { entry?: { resource: NamedResource }[] } | null | unde
   return m;
 }
 
-export default async function EncountersPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ status?: string }>;
-}) {
-  const { status = "all" } = await searchParams;
+export default function EncountersPage() {
+  const searchParams = useSearchParams();
+  const status = searchParams.get("status") ?? "all";
   const params: Record<string, string | number | undefined> = { _count: 50, _sort: "-_lastUpdated" };
   if (status !== "all") params.status = status;
 
-  const [encountersBundle, patientsBundle, practitionersBundle] = await Promise.all([
-    fhirSearch<Encounter>("Encounter", params),
-    fhirSearch<NamedResource>("Patient", { _count: 100 }),
-    fhirSearch<NamedResource>("Practitioner", { _count: 100 }),
-  ]);
+  const encounters = useFhirSearch<Encounter>("Encounter", params);
+  const patients = useFhirSearch<NamedResource>("Patient", { _count: 100 });
+  const practitioners = useFhirSearch<NamedResource>("Practitioner", { _count: 100 });
 
-  const rows = entries(encountersBundle);
-  const patientNames = nameMap(patientsBundle);
-  const practitionerNames = nameMap(practitionersBundle);
+  const ready = !!encounters.data && !!patients.data && !!practitioners.data;
+  const rows = encounters.data ? entries(encounters.data) : [];
+  const patientNames = nameMap(patients.data);
+  const practitionerNames = nameMap(practitioners.data);
 
   return (
     <div className="space-y-6">
@@ -58,8 +57,14 @@ export default async function EncountersPage({
         <div>
           <h1 className="text-2xl font-semibold text-neutral-900">Encounters</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {rows.length} {rows.length === 1 ? "encounter" : "encounters"}
-            {status !== "all" ? ` (${status})` : ""}.
+            {ready ? (
+              <>
+                {rows.length} {rows.length === 1 ? "encounter" : "encounters"}
+                {status !== "all" ? ` (${status})` : ""}.
+              </>
+            ) : (
+              "Loading…"
+            )}
           </p>
         </div>
         <Link
@@ -89,7 +94,13 @@ export default async function EncountersPage({
         })}
       </nav>
 
-      {rows.length === 0 ? (
+      {encounters.error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          Failed to load encounters: {encounters.error.message}
+        </div>
+      ) : !ready ? (
+        <TableSkeleton />
+      ) : rows.length === 0 ? (
         <div className="rounded-lg border border-neutral-200 bg-white p-6 text-sm">
           <p className="font-medium text-neutral-900">No encounters yet</p>
           <p className="mt-1 text-neutral-500">
