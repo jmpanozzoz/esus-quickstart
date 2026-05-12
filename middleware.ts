@@ -1,30 +1,72 @@
 /**
- * Auto-refresh access tokens before they hit a server component.
+ * Edge gate + token auto-refresh for the authenticated app shell.
  *
- * The access cookie's maxAge mirrors the JWT TTL (15 min by default).
- * The refresh cookie lives 30 days. Once the access cookie expires the
- * browser drops it; this middleware sees "no access, have refresh",
- * calls POST /v1/auth/refresh, and writes the new pair so the page
- * downstream sees a fresh token without bouncing the user to /login.
+ * Two responsibilities:
  *
- * Why middleware (not a server-component helper): server components in
- * Next 15 can READ cookies but cannot WRITE them mid-render. Middleware
- * is the canonical place to set cookies before the route handler /
- * server component runs.
+ *   1. **Cheap auth gate**: if neither cookie is present, redirect to
+ *      /login immediately. No API round-trip. This is what the layout's
+ *      `requireSession()` used to do *blockingly* — now we do it at the
+ *      edge so the HTML for protected routes never even renders without
+ *      a cookie. Server components downstream don't need to repeat the
+ *      check; they trust that this middleware already filtered the
+ *      no-cookie case out.
+ *
+ *      The cookie's MERE PRESENCE is the gate (not its validity).
+ *      Validating the access token signature would require an API call
+ *      and re-introduce the 1-second blocking we're trying to remove.
+ *      Validity is checked client-side by `<AppShell>` calling
+ *      `/api/auth/me` on mount; if the call 401s, the client redirects.
+ *
+ *   2. **Auto-refresh**: when the access cookie has expired but the
+ *      refresh cookie is alive, hit `/v1/auth/refresh` to mint a fresh
+ *      pair and write them back as `Set-Cookie`. Page downstream sees a
+ *      valid session without bouncing the user to /login.
+ *
+ *      If refresh ALSO fails (refresh token expired or revoked), clear
+ *      both cookies and redirect to /login — a stale refresh token will
+ *      keep failing on every request, so cleaning it up immediately
+ *      avoids a loop where each nav re-attempts the same dead refresh.
+ *
+ *  Server components in Next 15 can READ cookies but cannot WRITE them
+ *  mid-render. Middleware is the canonical place to set cookies before
+ *  the route handler / server component runs.
  */
 import { type NextRequest, NextResponse } from "next/server";
 
 const ACCESS = "esus_access";
 const REFRESH = "esus_refresh";
 
+function loginRedirect(req: NextRequest, clearCookies = false): NextResponse {
+  const url = req.nextUrl.clone();
+  // Preserve where the user was trying to go so /login can `?next=...`.
+  const nextParam = req.nextUrl.pathname + req.nextUrl.search;
+  url.pathname = "/login";
+  url.search = nextParam && nextParam !== "/login" ? `?next=${encodeURIComponent(nextParam)}` : "";
+  const out = NextResponse.redirect(url);
+  if (clearCookies) {
+    out.cookies.delete(ACCESS);
+    out.cookies.delete(REFRESH);
+  }
+  return out;
+}
+
 export async function middleware(req: NextRequest) {
   const access = req.cookies.get(ACCESS)?.value;
   const refreshToken = req.cookies.get(REFRESH)?.value;
 
-  if (access || !refreshToken) {
+  // Both cookies absent → unauthenticated; bounce to /login at the
+  // edge before any HTML renders.
+  if (!access && !refreshToken) {
+    return loginRedirect(req);
+  }
+
+  // Access cookie present → let the request through. Validity is
+  // verified client-side, deliberately not here.
+  if (access) {
     return NextResponse.next();
   }
 
+  // No access, have refresh → try to refresh in-line.
   const apiUrl = process.env.ESUS_API_URL;
   const appId = process.env.ESUS_APP_ID;
   if (!apiUrl || !appId) return NextResponse.next();
@@ -39,7 +81,12 @@ export async function middleware(req: NextRequest) {
       body: JSON.stringify({ refreshToken }),
       cache: "no-store",
     });
-    if (!res.ok) return NextResponse.next();
+    if (!res.ok) {
+      // Refresh token rejected (expired, revoked, replay-detected).
+      // Clear both cookies and bounce — leaving the bad refresh
+      // around would re-fail on every nav.
+      return loginRedirect(req, true);
+    }
     const tokens = (await res.json()) as {
       accessToken: string;
       refreshToken: string;
@@ -63,6 +110,8 @@ export async function middleware(req: NextRequest) {
     });
     return out;
   } catch {
+    // Network blip — let the request through. The client-side
+    // `/api/auth/me` check will catch a truly broken session.
     return NextResponse.next();
   }
 }

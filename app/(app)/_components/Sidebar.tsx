@@ -14,10 +14,10 @@ const NAV = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  // Reads from the Zustand store hydrated by `<AppShell>`. If the
-  // store hasn't been populated yet (very brief first-paint window),
-  // render conservatively — the user block just stays empty for that
-  // frame rather than crashing on `user.email`.
+  // Reads from the Zustand store hydrated by `<AppShell>`. When the
+  // store hasn't been populated yet (the ~one round-trip window
+  // where `<AppShell>` is still fetching `/api/auth/me`), we render
+  // a skeleton so the layout doesn't jump on swap-in.
   const user = useAuth((s) => s.user);
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-neutral-200 bg-white">
@@ -60,10 +60,19 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-neutral-200 px-4 py-4">
-        <p className="truncate text-xs font-medium text-neutral-900">
-          {user?.firstName ?? user?.email ?? " "}
-        </p>
-        <p className="truncate text-[11px] text-neutral-500">{user?.email ?? " "}</p>
+        {user ? (
+          <>
+            <p className="truncate text-xs font-medium text-neutral-900">
+              {user.firstName ?? user.email}
+            </p>
+            <p className="truncate text-[11px] text-neutral-500">{user.email}</p>
+          </>
+        ) : (
+          <div className="space-y-1.5" aria-hidden="true">
+            <div className="h-3 w-24 animate-pulse rounded bg-neutral-200" />
+            <div className="h-2.5 w-32 animate-pulse rounded bg-neutral-200" />
+          </div>
+        )}
         <form action="/api/auth/logout" method="POST" className="mt-3">
           <button
             type="submit"
