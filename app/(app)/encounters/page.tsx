@@ -4,6 +4,7 @@ export const runtime = "edge";
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useMemo } from "react";
 import { TableSkeleton } from "../_components/Skeleton";
 import { entries, type FhirBundle, type FhirResource } from "@/lib/fhir";
 import { formatDateTime } from "@/lib/fhir-appointment";
@@ -15,7 +16,7 @@ import {
   type Encounter,
 } from "@/lib/fhir-encounter";
 import { formatName, type HumanName } from "@/lib/fhir-helpers";
-import { useFhirSearch } from "@/lib/use-fhir";
+import { useFhirBatch } from "@/lib/use-fhir";
 
 const STATUS_TABS: { value: string; label: string }[] = [
   { value: "all", label: "All" },
@@ -41,17 +42,35 @@ function nameMap(bundle: FhirBundle<NamedResource> | undefined): Map<string, str
 export default function EncountersPage() {
   const searchParams = useSearchParams();
   const status = searchParams.get("status") ?? "all";
-  const params: Record<string, string | number | undefined> = { _count: 50, _sort: "-_lastUpdated" };
-  if (status !== "all") params.status = status;
+  const encQs = useMemo(() => {
+    const usp = new URLSearchParams();
+    usp.set("_count", "50");
+    usp.set("_sort", "-_lastUpdated");
+    if (status !== "all") usp.set("status", status);
+    return usp.toString();
+  }, [status]);
 
-  const encounters = useFhirSearch<Encounter>("Encounter", params);
-  const patients = useFhirSearch<NamedResource>("Patient", { _count: 100 });
-  const practitioners = useFhirSearch<NamedResource>("Practitioner", { _count: 100 });
+  // One round-trip for the three queries this page needs — see the
+  // dashboard's comment for the why behind FHIR batch.
+  const batch = useFhirBatch(
+    useMemo(
+      () => [
+        { method: "GET" as const, url: `Encounter?${encQs}` },
+        { method: "GET" as const, url: "Patient?_count=100" },
+        { method: "GET" as const, url: "Practitioner?_count=100" },
+      ],
+      [encQs],
+    ),
+  );
 
-  const ready = !!encounters.data && !!patients.data && !!practitioners.data;
-  const rows = encounters.data ? entries(encounters.data) : [];
-  const patientNames = nameMap(patients.data);
-  const practitionerNames = nameMap(practitioners.data);
+  const encountersBundle = batch.data?.entry?.[0]?.resource as FhirBundle<Encounter> | undefined;
+  const patientsBundle = batch.data?.entry?.[1]?.resource as FhirBundle<NamedResource> | undefined;
+  const practitionersBundle = batch.data?.entry?.[2]?.resource as FhirBundle<NamedResource> | undefined;
+
+  const ready = !!batch.data;
+  const rows = encountersBundle ? entries(encountersBundle) : [];
+  const patientNames = nameMap(patientsBundle);
+  const practitionerNames = nameMap(practitionersBundle);
 
   return (
     <div className="space-y-6">
@@ -96,9 +115,9 @@ export default function EncountersPage() {
         })}
       </nav>
 
-      {encounters.error ? (
+      {batch.error ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          Failed to load encounters: {encounters.error.message}
+          Failed to load encounters: {batch.error.userMessage}
         </div>
       ) : !ready ? (
         <TableSkeleton />

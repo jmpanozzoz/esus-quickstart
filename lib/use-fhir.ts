@@ -19,7 +19,7 @@
 
 import useSWR, { type SWRConfiguration } from "swr";
 import { fromResponse, networkError, type ApiError } from "@/lib/api-errors";
-import type { FhirBundle, FhirResource } from "@/lib/fhir";
+import type { BatchRequest, BatchResponseBundle, FhirBundle, FhirResource } from "@/lib/fhir";
 
 async function fhirFetcher<T = unknown>(url: string): Promise<T> {
   let res: Response;
@@ -34,6 +34,48 @@ async function fhirFetcher<T = unknown>(url: string): Promise<T> {
 
 /** Re-export so consumer pages can type-narrow inside `if (error)`. */
 export type { ApiError };
+
+async function batchFetcher(requests: BatchRequest[]): Promise<BatchResponseBundle> {
+  let res: Response;
+  try {
+    res = await fetch("/api/fhir", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requests }),
+    });
+  } catch (cause) {
+    throw networkError(cause);
+  }
+  if (!res.ok) throw await fromResponse(res);
+  return res.json() as Promise<BatchResponseBundle>;
+}
+
+/**
+ * Fan a list of FHIR sub-requests through a SINGLE round-trip and let
+ * SWR cache the whole batch under one key. Use when a page would
+ * otherwise fire ≥3 parallel `useFhirSearch` hooks against the same
+ * tenant — the dashboard's 8-call fan-out is the canonical case.
+ *
+ * The returned bundle has one entry per request in the same order;
+ * each entry's `resource` is the typed body (e.g. a search Bundle for
+ * a GET, the created resource for a POST). Callers can map positionally
+ * or write a helper that pairs labels with the request list.
+ */
+export function useFhirBatch(
+  requests: BatchRequest[],
+  options: SWRConfiguration<BatchResponseBundle, ApiError> = {},
+) {
+  // Stable key: stringify the request list. SWR dedupes identical
+  // batches across components / re-renders. If the input order or
+  // params change the key changes and SWR re-fetches.
+  const key = `batch:${JSON.stringify(requests)}`;
+  return useSWR<BatchResponseBundle, ApiError>(key, () => batchFetcher(requests), {
+    revalidateOnFocus: false,
+    keepPreviousData: true,
+    ...options,
+  });
+}
 
 function buildPath(resource: string, params?: Record<string, string | number | string[] | undefined>): string {
   const usp = new URLSearchParams();

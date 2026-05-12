@@ -4,6 +4,7 @@ export const runtime = "edge";
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useMemo } from "react";
 import { TableSkeleton } from "../_components/Skeleton";
 import { entries, type FhirBundle, type FhirResource } from "@/lib/fhir";
 import {
@@ -14,7 +15,7 @@ import {
   statusBadgeClass,
 } from "@/lib/fhir-appointment";
 import { formatName, type HumanName } from "@/lib/fhir-helpers";
-import { useFhirSearch } from "@/lib/use-fhir";
+import { useFhirBatch } from "@/lib/use-fhir";
 import { CancelAppointmentButton } from "./_components/CancelAppointmentButton";
 
 const STATUS_TABS: { value: string; label: string }[] = [
@@ -42,30 +43,41 @@ export default function AppointmentsPage() {
   const searchParams = useSearchParams();
   const status = searchParams.get("status") ?? "upcoming";
 
-  const params: Record<string, string | number | undefined> = {
-    _count: 50,
-    _sort: "date",
-  };
-  if (status === "upcoming") {
-    params.date = `ge${new Date().toISOString()}`;
-  } else if (status !== "all") {
-    params.status = status;
-  }
+  // One round-trip for the three queries this page needs (the page +
+  // patient name map + practitioner name map). FHIR `batch` collapses
+  // them into a single Edge Worker → API hop so the table renders
+  // without the stair-stepped TTFB seen with parallel SWR calls.
+  const apptQs = useMemo(() => {
+    const usp = new URLSearchParams();
+    usp.set("_count", "50");
+    usp.set("_sort", "date");
+    if (status === "upcoming") usp.set("date", `ge${new Date().toISOString()}`);
+    else if (status !== "all") usp.set("status", status);
+    return usp.toString();
+  }, [status]);
 
-  // Three queries fire in parallel; the table only renders once all
-  // three resolve so we can render the joined names without "—" flicker.
-  // Skeleton stays put until then.
-  const appointments = useFhirSearch<Appointment>("Appointment", params);
-  const patients = useFhirSearch<NamedResource>("Patient", { _count: 100 });
-  const practitioners = useFhirSearch<NamedResource>("Practitioner", { _count: 100 });
+  const batch = useFhirBatch(
+    useMemo(
+      () => [
+        { method: "GET" as const, url: `Appointment?${apptQs}` },
+        { method: "GET" as const, url: "Patient?_count=100" },
+        { method: "GET" as const, url: "Practitioner?_count=100" },
+      ],
+      [apptQs],
+    ),
+  );
 
-  const ready = !!appointments.data && !!patients.data && !!practitioners.data;
-  const patientNames = buildNameMap(patients.data);
-  const practitionerNames = buildNameMap(practitioners.data);
+  const appointmentsBundle = batch.data?.entry?.[0]?.resource as FhirBundle<Appointment> | undefined;
+  const patientsBundle = batch.data?.entry?.[1]?.resource as FhirBundle<NamedResource> | undefined;
+  const practitionersBundle = batch.data?.entry?.[2]?.resource as FhirBundle<NamedResource> | undefined;
+
+  const ready = !!batch.data;
+  const patientNames = buildNameMap(patientsBundle);
+  const practitionerNames = buildNameMap(practitionersBundle);
 
   const CANCELLED = new Set(["cancelled", "noshow", "entered-in-error"]);
-  const rows = appointments.data
-    ? entries(appointments.data).filter((a) => {
+  const rows = appointmentsBundle
+    ? entries(appointmentsBundle).filter((a) => {
         if (status !== "upcoming") return true;
         if (!isUpcoming(a.start)) return false;
         return !CANCELLED.has(a.status ?? "");
@@ -115,9 +127,9 @@ export default function AppointmentsPage() {
         })}
       </nav>
 
-      {appointments.error ? (
+      {batch.error ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          Failed to load appointments: {appointments.error.message}
+          Failed to load appointments: {batch.error.userMessage}
         </div>
       ) : !ready ? (
         <TableSkeleton />
