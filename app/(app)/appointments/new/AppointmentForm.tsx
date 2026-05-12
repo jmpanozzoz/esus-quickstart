@@ -7,10 +7,22 @@ import {
   FormError,
   FormSection,
   PrimaryButton,
+  QuickPicks,
   SecondaryButton,
   Select,
+  Textarea,
   TextInput,
 } from "../../_components/Field";
+
+const COMMON_REASONS = [
+  "Annual check-up",
+  "Follow-up",
+  "New consultation",
+  "Acute visit",
+  "Lab review",
+  "Procedure",
+  "Telehealth",
+] as const;
 
 export interface Option {
   id: string;
@@ -104,7 +116,7 @@ export function AppointmentForm({
   return (
     <form onSubmit={onSubmit} className="max-w-3xl space-y-8">
       <FormSection title="Participants">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Patient" required>
             <Select
               required
@@ -138,7 +150,7 @@ export function AppointmentForm({
       </FormSection>
 
       <FormSection title="When">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="Date" required>
             <TextInput type="date" required value={form.date} onChange={(e) => update("date", e.target.value)} />
           </Field>
@@ -160,16 +172,22 @@ export function AppointmentForm({
         </div>
       </FormSection>
 
-      <FormSection title="Reason">
-        <Field label="Reason" hint="What the visit is about (free-text for v1).">
+      <FormSection title="Reason for visit" hint="What's the appointment about? Tap a common reason or type your own.">
+        <Field label="Reason">
           <TextInput
             placeholder="Annual check-up, follow-up, …"
             value={form.reason}
             onChange={(e) => update("reason", e.target.value)}
           />
+          <QuickPicks value={form.reason} onPick={(v) => update("reason", v)} options={COMMON_REASONS} />
         </Field>
-        <Field label="Notes" hint="Surfaced as description on the appointment.">
-          <TextInput value={form.description} onChange={(e) => update("description", e.target.value)} />
+
+        <Field label="Notes" hint="Surfaced as the appointment description — visible to the patient on confirmation.">
+          <Textarea
+            placeholder="Anything the practitioner should know before the visit?"
+            value={form.description}
+            onChange={(e) => update("description", e.target.value)}
+          />
         </Field>
       </FormSection>
 

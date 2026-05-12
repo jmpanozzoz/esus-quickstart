@@ -1,3 +1,4 @@
+import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { entries, type FhirResource, fhirSearch } from "@/lib/fhir";
 import { formatName, type HumanName } from "@/lib/fhir-helpers";
@@ -22,16 +23,19 @@ export default async function NewEncounterPage() {
 
   return (
     <div className="space-y-6">
+      <Link
+        href="/encounters"
+        className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500 hover:text-brand-700"
+      >
+        <ChevronLeft className="h-3 w-3" aria-hidden="true" />
+        Encounters
+      </Link>
+
       <header>
-        <p className="text-xs text-neutral-500">
-          <Link href="/encounters" className="hover:text-neutral-700">
-            ← Encounters
-          </Link>
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold text-neutral-900">Open encounter</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Open encounter</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          A FHIR <code className="font-mono">Encounter</code> records an actual clinical interaction — the visit
-          itself. Setting status to <em>in-progress</em> starts the period timer.
+          A FHIR <code className="font-mono text-neutral-700">Encounter</code> records an actual clinical interaction —
+          the visit itself. Setting status to <em>in-progress</em> starts the period timer.
         </p>
       </header>
 

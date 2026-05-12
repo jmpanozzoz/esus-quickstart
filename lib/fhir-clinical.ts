@@ -60,10 +60,12 @@ export const CONDITION_CLINICAL_OPTIONS: { code: ConditionClinicalStatus; label:
 export const CONDITION_SEVERITY_OPTIONS = ["Mild", "Moderate", "Severe"];
 
 export function conditionStatusBadge(s?: string): string {
-  const base = "inline-flex items-center rounded-full px-2 py-0.5 text-[11px]";
-  if (s === "active" || s === "recurrence" || s === "relapse") return `${base} bg-neutral-900 text-white`;
-  if (s === "resolved" || s === "remission") return `${base} bg-neutral-100 text-neutral-700`;
-  if (s === "inactive") return `${base} border border-neutral-300 text-neutral-600`;
+  const base = "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium";
+  if (s === "active" || s === "recurrence" || s === "relapse")
+    return `${base} bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200`;
+  if (s === "resolved" || s === "remission")
+    return `${base} bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200`;
+  if (s === "inactive") return `${base} bg-neutral-100 text-neutral-600`;
   return `${base} bg-neutral-100 text-neutral-600`;
 }
 
@@ -102,10 +104,13 @@ export function observationValue(o: Observation): string {
 }
 
 export function observationStatusBadge(s?: ObservationStatus): string {
-  const base = "inline-flex items-center rounded-full px-2 py-0.5 text-[11px]";
-  if (s === "final" || s === "amended" || s === "corrected") return `${base} bg-neutral-900 text-white`;
-  if (s === "preliminary" || s === "registered") return `${base} border border-neutral-300 text-neutral-600`;
-  if (s === "cancelled" || s === "entered-in-error") return `${base} bg-neutral-100 text-neutral-400 line-through`;
+  const base = "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium";
+  if (s === "final" || s === "amended" || s === "corrected")
+    return `${base} bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200`;
+  if (s === "preliminary" || s === "registered")
+    return `${base} bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200`;
+  if (s === "cancelled" || s === "entered-in-error")
+    return `${base} bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200 line-through`;
   return `${base} bg-neutral-100 text-neutral-600`;
 }
 
@@ -158,10 +163,12 @@ export function medicationDisplay(m: MedicationRequest): string {
 }
 
 export function medicationStatusBadge(s?: MedicationRequestStatus): string {
-  const base = "inline-flex items-center rounded-full px-2 py-0.5 text-[11px]";
-  if (s === "active") return `${base} bg-neutral-900 text-white`;
-  if (s === "completed") return `${base} bg-neutral-100 text-neutral-700`;
-  if (s === "on-hold" || s === "draft") return `${base} border border-neutral-300 text-neutral-600`;
-  if (s === "cancelled" || s === "stopped" || s === "entered-in-error") return `${base} bg-neutral-100 text-neutral-400 line-through`;
+  const base = "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium";
+  if (s === "active") return `${base} bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200`;
+  if (s === "completed") return `${base} bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200`;
+  if (s === "on-hold" || s === "draft")
+    return `${base} bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200`;
+  if (s === "cancelled" || s === "stopped" || s === "entered-in-error")
+    return `${base} bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200 line-through`;
   return `${base} bg-neutral-100 text-neutral-600`;
 }

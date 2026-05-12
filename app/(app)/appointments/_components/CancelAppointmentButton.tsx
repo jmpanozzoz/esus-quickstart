@@ -32,7 +32,7 @@ export function CancelAppointmentButton({ id }: { id: string }) {
       type="button"
       onClick={onCancel}
       disabled={busy}
-      className="rounded-md border border-neutral-300 px-2.5 py-1 text-xs text-neutral-700 transition-colors hover:bg-neutral-100 disabled:opacity-50"
+      className="inline-flex items-center rounded-md bg-white px-2.5 py-1 text-xs font-medium text-rose-600 ring-1 ring-inset ring-rose-200 transition-colors hover:bg-rose-50 hover:ring-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
     >
       {busy ? "Cancelling…" : "Cancel"}
     </button>

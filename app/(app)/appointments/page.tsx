@@ -2,6 +2,7 @@
 
 export const runtime = "edge";
 
+import { CalendarPlus } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
@@ -86,14 +87,14 @@ export default function AppointmentsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-end justify-between gap-4">
+      <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-neutral-900">Appointments</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Appointments</h1>
           <p className="mt-1 text-sm text-neutral-500">
             {ready ? (
               <>
                 {rows.length} {rows.length === 1 ? "appointment" : "appointments"}
-                {status !== "all" ? ` (${status})` : ""}.
+                {status !== "all" ? ` · ${status}` : ""}.
               </>
             ) : (
               "Loading…"
@@ -102,22 +103,23 @@ export default function AppointmentsPage() {
         </div>
         <Link
           href="/appointments/new"
-          className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800"
+          className="inline-flex h-[38px] items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3 text-sm font-medium text-white shadow-card transition-colors hover:bg-brand-700"
         >
-          + New
+          <CalendarPlus className="h-3.5 w-3.5" aria-hidden="true" />
+          Schedule
         </Link>
       </header>
 
-      <nav className="flex gap-1 border-b border-neutral-200">
+      <nav className="-mx-4 flex gap-1 overflow-x-auto border-b border-neutral-200 px-4 sm:mx-0 sm:px-0">
         {STATUS_TABS.map((t) => {
           const active = status === t.value;
           return (
             <Link
               key={t.value}
               href={t.value === "upcoming" ? "/appointments" : `/appointments?status=${t.value}`}
-              className={`-mb-px border-b-2 px-3 py-2 text-sm transition-colors ${
+              className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
                 active
-                  ? "border-neutral-900 text-neutral-900"
+                  ? "border-brand-600 text-brand-700"
                   : "border-transparent text-neutral-500 hover:text-neutral-800"
               }`}
             >
@@ -128,27 +130,31 @@ export default function AppointmentsPage() {
       </nav>
 
       {batch.error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
           Failed to load appointments: {batch.error.userMessage}
         </div>
       ) : !ready ? (
         <TableSkeleton />
       ) : rows.length === 0 ? (
-        <div className="rounded-lg border border-neutral-200 bg-white p-6 text-sm">
-          <p className="font-medium text-neutral-900">
-            No appointments {status === "upcoming" ? "upcoming" : `with status "${status}"`}.
+        <div className="rounded-xl border border-dashed border-neutral-200 bg-white px-6 py-10 text-center shadow-card">
+          <p className="text-sm font-medium text-neutral-900">
+            No appointments {status === "upcoming" ? "upcoming" : `with status "${status}"`}
           </p>
-          <p className="mt-1 text-neutral-500">
-            <Link href="/appointments/new" className="underline hover:text-neutral-700">
-              Schedule one
-            </Link>{" "}
-            to populate this list.
+          <p className="mx-auto mt-1 max-w-sm text-xs text-neutral-500">
+            Schedule one to populate this list — patients receive timezone-aware reminders automatically.
           </p>
+          <Link
+            href="/appointments/new"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-xs font-medium text-white shadow-card transition-colors hover:bg-brand-700"
+          >
+            <CalendarPlus className="h-3.5 w-3.5" aria-hidden="true" />
+            Schedule an appointment
+          </Link>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+        <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-card">
           <table className="w-full text-sm">
-            <thead className="border-b border-neutral-200 bg-neutral-50">
+            <thead className="border-b border-neutral-100 bg-neutral-50/60">
               <tr className="text-left text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
                 <th className="px-4 py-2.5">When</th>
                 <th className="px-4 py-2.5">Patient</th>
@@ -165,25 +171,25 @@ export default function AppointmentsPage() {
                 const patientName = (pid && patientNames.get(pid)) ?? "—";
                 const practitionerName = (prid && practitionerNames.get(prid)) ?? "—";
                 return (
-                  <tr key={a.id} className="hover:bg-neutral-50">
-                    <td className="px-4 py-2.5 text-neutral-900">{formatDateTime(a.start)}</td>
-                    <td className="px-4 py-2.5">
+                  <tr key={a.id} className="transition-colors hover:bg-brand-50/40">
+                    <td className="px-4 py-3 text-neutral-900">{formatDateTime(a.start)}</td>
+                    <td className="px-4 py-3">
                       {pid ? (
-                        <Link href={`/patients/${pid}`} className="text-neutral-800 hover:underline">
+                        <Link href={`/patients/${pid}`} className="font-medium text-neutral-900 hover:text-brand-700">
                           {patientName}
                         </Link>
                       ) : (
                         <span className="text-neutral-500">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-neutral-800">{practitionerName}</td>
-                    <td className="px-4 py-2.5 text-neutral-700">
+                    <td className="px-4 py-3 text-neutral-700">{practitionerName}</td>
+                    <td className="px-4 py-3 text-neutral-700">
                       {a.description ?? a.reasonCode?.[0]?.text ?? "—"}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-4 py-3">
                       <span className={statusBadgeClass(a.status)}>{a.status ?? "—"}</span>
                     </td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="px-4 py-3 text-right">
                       {a.id && a.status !== "cancelled" && a.status !== "fulfilled" ? (
                         <CancelAppointmentButton id={a.id} />
                       ) : null}

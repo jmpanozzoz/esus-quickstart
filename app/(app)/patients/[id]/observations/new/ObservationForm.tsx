@@ -9,6 +9,7 @@ import {
   PrimaryButton,
   SecondaryButton,
   Select,
+  Textarea,
   TextInput,
 } from "../../../../_components/Field";
 import { OBSERVATION_QUICK, type ObservationStatus } from "@/lib/fhir-clinical";
@@ -101,7 +102,7 @@ export function ObservationForm({ patientId }: { patientId: string }) {
               key={q.label}
               type="button"
               onClick={() => pickQuick(q.label, q.unit)}
-              className="rounded-md border border-neutral-300 px-2.5 py-1 text-xs text-neutral-700 transition-colors hover:bg-neutral-100"
+              className="rounded-full bg-white px-3 py-1 text-xs font-medium text-neutral-700 ring-1 ring-inset ring-neutral-200 transition-colors hover:bg-brand-50 hover:text-brand-700 hover:ring-brand-200"
             >
               {q.label}
             </button>
@@ -113,7 +114,7 @@ export function ObservationForm({ patientId }: { patientId: string }) {
         <Field label="What" required hint='e.g. "Blood pressure", "Weight". Free-text for v1.'>
           <TextInput required value={form.code} onChange={(e) => update("code", e.target.value)} />
         </Field>
-        <div className="grid grid-cols-[1fr_140px] gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_140px]">
           <Field label="Value" required>
             <TextInput
               required
@@ -130,7 +131,7 @@ export function ObservationForm({ patientId }: { patientId: string }) {
             />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Effective" required>
             <TextInput
               type="datetime-local"
@@ -150,8 +151,8 @@ export function ObservationForm({ patientId }: { patientId: string }) {
             </Select>
           </Field>
         </div>
-        <Field label="Note">
-          <TextInput value={form.note} onChange={(e) => update("note", e.target.value)} />
+        <Field label="Note" hint="Optional interpretation, technique used, or relevant context.">
+          <Textarea value={form.note} onChange={(e) => update("note", e.target.value)} />
         </Field>
       </FormSection>
 

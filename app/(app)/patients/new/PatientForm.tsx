@@ -1,5 +1,6 @@
 "use client";
 
+import { Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -149,15 +150,18 @@ export function PatientForm({ patientId, initialValues }: PatientFormProps = {})
   return (
     <form onSubmit={onSubmit} className="max-w-3xl space-y-8">
       {mode === "edit" ? (
-        <p className="rounded-md border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-600">
-          <strong className="font-medium text-neutral-800">Encrypted fields appear blank.</strong>{" "}
-          Document number, phone, and email are stored encrypted and aren't shown here. Leave them
-          blank to keep the current value, or type to replace.
-        </p>
+        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <p>
+            <strong className="font-semibold">Encrypted fields appear blank.</strong> Document number, phone, and email
+            are stored encrypted and aren&apos;t shown here. Leave them blank to keep the current value, or type to
+            replace.
+          </p>
+        </div>
       ) : null}
 
       <FormSection title="Identity">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Given name" required>
             <TextInput required autoFocus value={form.given} onChange={(e) => update("given", e.target.value)} />
           </Field>
@@ -165,7 +169,7 @@ export function PatientForm({ patientId, initialValues }: PatientFormProps = {})
             <TextInput required value={form.family} onChange={(e) => update("family", e.target.value)} />
           </Field>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="Gender">
             <Select value={form.gender} onChange={(e) => update("gender", e.target.value as PatientFormState["gender"])}>
               <option value="">—</option>
@@ -189,7 +193,7 @@ export function PatientForm({ patientId, initialValues }: PatientFormProps = {})
       </FormSection>
 
       <FormSection title="Document" hint="National ID, passport, or local medical record number.">
-        <div className="grid grid-cols-[200px_1fr] gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[200px_1fr]">
           <Field label="Type">
             <Select value={form.idSystem} onChange={(e) => update("idSystem", e.target.value as PatientFormState["idSystem"])}>
               <option value="national_id">National ID</option>
@@ -209,7 +213,7 @@ export function PatientForm({ patientId, initialValues }: PatientFormProps = {})
       </FormSection>
 
       <FormSection title="Contact">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Phone">
             <TextInput
               type="tel"
@@ -233,7 +237,7 @@ export function PatientForm({ patientId, initialValues }: PatientFormProps = {})
         <Field label="Street">
           <TextInput value={form.addrLine} onChange={(e) => update("addrLine", e.target.value)} />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="City">
             <TextInput value={form.city} onChange={(e) => update("city", e.target.value)} />
           </Field>
@@ -241,7 +245,7 @@ export function PatientForm({ patientId, initialValues }: PatientFormProps = {})
             <TextInput value={form.state} onChange={(e) => update("state", e.target.value)} />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Postal code">
             <TextInput value={form.postalCode} onChange={(e) => update("postalCode", e.target.value)} />
           </Field>
@@ -256,7 +260,7 @@ export function PatientForm({ patientId, initialValues }: PatientFormProps = {})
           type="checkbox"
           checked={form.active}
           onChange={(e) => update("active", e.target.checked)}
-          className="h-4 w-4 rounded border-neutral-300"
+          className="h-4 w-4 rounded"
         />
         Active
       </label>

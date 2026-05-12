@@ -1,3 +1,4 @@
+import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { entries, type FhirResource, fhirSearch } from "@/lib/fhir";
 import { formatName, type HumanName } from "@/lib/fhir-helpers";
@@ -22,15 +23,19 @@ export default async function NewAppointmentPage() {
 
   return (
     <div className="space-y-6">
+      <Link
+        href="/appointments"
+        className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500 hover:text-brand-700"
+      >
+        <ChevronLeft className="h-3 w-3" aria-hidden="true" />
+        Appointments
+      </Link>
+
       <header>
-        <p className="text-xs text-neutral-500">
-          <Link href="/appointments" className="hover:text-neutral-700">
-            ← Appointments
-          </Link>
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold text-neutral-900">Schedule appointment</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Schedule appointment</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          Posts a FHIR <code className="font-mono">Appointment</code> with patient + practitioner participants.
+          Posts a FHIR <code className="font-mono text-neutral-700">Appointment</code> with patient and practitioner
+          participants. Reminders run on the server&apos;s timezone-aware scheduler.
         </p>
       </header>
 

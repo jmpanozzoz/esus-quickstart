@@ -2,7 +2,7 @@
   "name": "esus-quickstart",
   "version": "0.1.0",
   "private": true,
-  "description": "Batteries-included Next.js 15 sample for the Esus BaaS API \u2014 tenant auth, FHIR data plane, patient hub, appointments, encounters, and a clean sidebar shell to build on.",
+  "description": "Batteries-included Next.js 15 sample for the Esus BaaS API — tenant auth, FHIR data plane, patient hub, appointments, encounters, and a clean sidebar shell to build on.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -14,6 +14,7 @@
     "generate-api": "openapi-typescript ${ESUS_API_URL:-https://api.esus.health}/docs/json -o lib/api-types.ts"
   },
   "dependencies": {
+    "lucide-react": "^1.14.0",
     "next": "^15.0.0",
     "openapi-fetch": "^0.17.0",
     "react": "^18.3.1",
