@@ -1,7 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ResourceTable, type Column } from "../_components/ResourceTable";
 import { SearchBar } from "../_components/SearchBar";
-import { entries, fhirSearch, type FhirResource } from "@/lib/fhir";
+import { TableSkeleton } from "../_components/Skeleton";
+import { entries, type FhirResource } from "@/lib/fhir";
 import {
   formatDate,
   formatGender,
@@ -10,8 +14,7 @@ import {
   type HumanName,
   type Identifier,
 } from "@/lib/fhir-helpers";
-
-export const runtime = "edge";
+import { useFhirSearch } from "@/lib/use-fhir";
 
 interface Patient extends FhirResource {
   resourceType: "Patient";
@@ -22,12 +25,13 @@ interface Patient extends FhirResource {
   active?: boolean;
 }
 
-export default async function PatientsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const { q } = await searchParams;
+export default function PatientsPage() {
+  const searchParams = useSearchParams();
+  const q = searchParams.get("q") ?? undefined;
   const params: Record<string, string | number> = { _count: 50, _sort: "-_lastUpdated" };
   if (q) params.name = q;
-  const bundle = await fhirSearch<Patient>("Patient", params);
-  const rows = entries(bundle);
+  const { data: bundle, isLoading, error } = useFhirSearch<Patient>("Patient", params);
+  const rows = bundle ? entries(bundle) : [];
 
   const columns: Column<Patient>[] = [
     {
@@ -66,8 +70,14 @@ export default async function PatientsPage({ searchParams }: { searchParams: Pro
         <div>
           <h1 className="text-2xl font-semibold text-neutral-900">Patients</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {bundle.total} {bundle.total === 1 ? "patient" : "patients"} in your tenant
-            {q ? ` matching "${q}"` : ""}.
+            {bundle ? (
+              <>
+                {bundle.total} {bundle.total === 1 ? "patient" : "patients"} in your tenant
+                {q ? ` matching "${q}"` : ""}.
+              </>
+            ) : isLoading ? (
+              "Loading…"
+            ) : null}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -81,12 +91,20 @@ export default async function PatientsPage({ searchParams }: { searchParams: Pro
         </div>
       </header>
 
-      <ResourceTable
-        rows={rows}
-        columns={columns}
-        emptyTitle={q ? `No patients match "${q}"` : "No patients yet"}
-        emptyHint="Create one from the Esus console (or via POST /fhir/Patient with your API key)."
-      />
+      {error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          Failed to load patients: {error.message}
+        </div>
+      ) : !bundle ? (
+        <TableSkeleton />
+      ) : (
+        <ResourceTable
+          rows={rows}
+          columns={columns}
+          emptyTitle={q ? `No patients match "${q}"` : "No patients yet"}
+          emptyHint="Create one from the Esus console (or via POST /fhir/Patient with your API key)."
+        />
+      )}
     </div>
   );
 }

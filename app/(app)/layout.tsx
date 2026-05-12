@@ -1,20 +1,22 @@
 /**
- * Authenticated app shell — sidebar + main content. The `requireSession`
- * call here is the single auth gate for /dashboard, /patients,
- * /practitioners, etc. Individual pages don't repeat it.
+ * Authenticated app shell.
+ *
+ *   Server side: `requireSession()` is the single auth gate for every
+ *   page under `(app)/*`. Cookies stay on the server, no token is
+ *   ever exposed to the browser. If the session is dead, redirect to
+ *   /login before any markup is rendered.
+ *
+ *   Client side: `<AppShell>` receives the user we already fetched
+ *   and hydrates the Zustand store with it. Pages under here are
+ *   then `"use client"` + SWR — page chrome (sidebar, header) paints
+ *   immediately on each navigation, data flies in async with
+ *   skeletons. No more "blank screen until everything resolves".
  */
 import { requireSession } from "@/lib/auth";
 import type { ReactNode } from "react";
-import { Sidebar } from "./_components/Sidebar";
+import { AppShell } from "./_components/AppShell";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const { user } = await requireSession();
-  return (
-    <div className="flex min-h-screen">
-      <Sidebar user={user} />
-      <main className="flex-1 overflow-x-hidden">
-        <div className="mx-auto w-full max-w-6xl px-6 py-8 lg:px-10 lg:py-10">{children}</div>
-      </main>
-    </div>
-  );
+  return <AppShell initialUser={user}>{children}</AppShell>;
 }

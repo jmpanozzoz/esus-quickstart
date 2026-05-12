@@ -1,8 +1,8 @@
 "use client";
 
-import type { MeResponse } from "@/lib/esus";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/store";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },
@@ -12,8 +12,13 @@ const NAV = [
   { href: "/practitioners", label: "Practitioners" },
 ];
 
-export function Sidebar({ user }: { user: MeResponse }) {
+export function Sidebar() {
   const pathname = usePathname();
+  // Reads from the Zustand store hydrated by `<AppShell>`. If the
+  // store hasn't been populated yet (very brief first-paint window),
+  // render conservatively — the user block just stays empty for that
+  // frame rather than crashing on `user.email`.
+  const user = useAuth((s) => s.user);
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-neutral-200 bg-white">
       <div className="px-5 py-5">
@@ -47,9 +52,9 @@ export function Sidebar({ user }: { user: MeResponse }) {
 
       <div className="border-t border-neutral-200 px-4 py-4">
         <p className="truncate text-xs font-medium text-neutral-900">
-          {user.firstName ?? user.email}
+          {user?.firstName ?? user?.email ?? " "}
         </p>
-        <p className="truncate text-[11px] text-neutral-500">{user.email}</p>
+        <p className="truncate text-[11px] text-neutral-500">{user?.email ?? " "}</p>
         <form action="/api/auth/logout" method="POST" className="mt-3">
           <button
             type="submit"
