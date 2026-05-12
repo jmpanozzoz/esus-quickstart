@@ -26,10 +26,15 @@ export function AppShell({ initialUser, children }: { initialUser: MeResponse; c
     hydrate(initialUser);
   }, [hydrate, initialUser]);
 
+  // `h-screen` (not `min-h-screen`) pins the whole shell to the
+  // viewport so the sidebar can't grow with the page. `<main>` is
+  // the only scrollable region — long lists / forms scroll inside it
+  // while the sidebar stays anchored. Without this the sidebar
+  // visually trailed off the bottom of the viewport on tall pages.
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <main className="flex-1 overflow-x-hidden">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="mx-auto w-full max-w-6xl px-6 py-8 lg:px-10 lg:py-10">{children}</div>
       </main>
     </div>
