@@ -1,5 +1,7 @@
 "use client";
 
+export const runtime = "edge";
+
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ResourceTable, type Column } from "../_components/ResourceTable";

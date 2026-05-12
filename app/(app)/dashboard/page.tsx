@@ -1,5 +1,11 @@
 "use client";
 
+// `runtime = "edge"` applies to the route's *server* component (the
+// shell that streams this client island), which Next.js still SSRs
+// on each navigation. `@cloudflare/next-on-pages` rejects the build
+// without it on any dynamic route.
+export const runtime = "edge";
+
 import Link from "next/link";
 import { StatCardsSkeleton, TableSkeleton } from "../_components/Skeleton";
 import { entries, type FhirBundle, type FhirResource } from "@/lib/fhir";
