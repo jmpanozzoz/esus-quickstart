@@ -1,0 +1,24 @@
+# Cloudflare Pages build/runtime config for the Esus quickstart.
+#
+# Committed so a fresh clone deploys correctly without manual UI
+# clicks — CF Pages reads this file before falling back to dashboard
+# values. The two flags below are non-negotiable for a Next.js 15 app
+# routed through @cloudflare/next-on-pages:
+#
+#   nodejs_compat   — Required so Next.js's built-in `node:` polyfills
+#                     (crypto, buffer, util, …) resolve at the Workers
+#                     edge. Without it, every route 1101s with the
+#                     "Node.JS Compatibility Error" page.
+#   compatibility_date — Pin a recent date so Workers picks up the
+#                     latest stable runtime semantics. Bump as needed.
+#
+# `pages_build_output_dir` tells CF this is a Pages project (not a
+# bare Worker) and points at the @cloudflare/next-on-pages output.
+# `npm run pages:deploy` already targets the same path; aligning the
+# two means a local CLI deploy and a dashboard-triggered deploy
+# behave identically.
+
+name = "esus-quickstart"
+compatibility_date = "2025-01-15"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
