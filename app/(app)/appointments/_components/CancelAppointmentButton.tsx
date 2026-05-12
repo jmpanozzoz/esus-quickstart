@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { invalidateResource } from "@/lib/use-fhir";
 
 export function CancelAppointmentButton({ id }: { id: string }) {
   const router = useRouter();
@@ -21,6 +22,7 @@ export function CancelAppointmentButton({ id }: { id: string }) {
         alert(body?.issue?.[0]?.diagnostics ?? body?.error ?? `Cancel failed (${res.status})`);
         return;
       }
+      await invalidateResource("Appointment");
       router.refresh();
     } finally {
       setBusy(false);

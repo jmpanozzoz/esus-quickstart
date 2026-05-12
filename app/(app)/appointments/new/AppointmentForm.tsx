@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { invalidateResource } from "@/lib/use-fhir";
 import {
   Field,
   FormError,
@@ -106,8 +107,8 @@ export function AppointmentForm({
         setError(typeof diag === "string" ? diag : JSON.stringify(diag));
         return;
       }
+      await invalidateResource("Appointment");
       router.push("/appointments");
-      router.refresh();
     } finally {
       setSaving(false);
     }

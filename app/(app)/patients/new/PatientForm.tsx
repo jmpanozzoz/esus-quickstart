@@ -3,6 +3,7 @@
 import { Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { invalidateResource } from "@/lib/use-fhir";
 import {
   Field,
   FormError,
@@ -140,8 +141,8 @@ export function PatientForm({ patientId, initialValues }: PatientFormProps = {})
         setError(typeof diag === "string" ? diag : JSON.stringify(diag));
         return;
       }
+      await invalidateResource("Patient");
       router.push(patientId ? `/patients/${patientId}` : "/patients");
-      router.refresh();
     } finally {
       setSaving(false);
     }

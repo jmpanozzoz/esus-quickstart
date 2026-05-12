@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { invalidateResource } from "@/lib/use-fhir";
 import {
   Field,
   FormError,
@@ -72,6 +73,7 @@ export function ConditionForm({ patientId }: { patientId: string }) {
         setError(typeof diag === "string" ? diag : JSON.stringify(diag));
         return;
       }
+      await invalidateResource("Condition");
       router.push(`/patients/${patientId}/conditions`);
       router.refresh();
     } finally {
