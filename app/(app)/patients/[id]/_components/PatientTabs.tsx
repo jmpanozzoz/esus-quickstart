@@ -14,7 +14,7 @@ const TABS = [
 export function PatientTabs({ patientId }: { patientId: string }) {
   const pathname = usePathname();
   return (
-    <nav className="-mx-4 overflow-x-auto border-b border-neutral-200 sm:mx-0">
+    <nav className="-mx-4 overflow-x-auto overflow-y-hidden border-b border-neutral-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0">
       <ul className="flex gap-1 px-4 sm:px-0">
         {TABS.map((t) => {
           const href = t.slug ? `/patients/${patientId}/${t.slug}` : `/patients/${patientId}`;

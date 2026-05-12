@@ -110,7 +110,7 @@ export default function AppointmentsPage() {
         </Link>
       </header>
 
-      <nav className="-mx-4 flex gap-1 overflow-x-auto border-b border-neutral-200 px-4 sm:mx-0 sm:px-0">
+      <nav className="-mx-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-neutral-200 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0">
         {STATUS_TABS.map((t) => {
           const active = status === t.value;
           return (

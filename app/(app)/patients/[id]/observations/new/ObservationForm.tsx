@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { invalidateResource } from "@/lib/use-fhir";
 import {
   Field,
   FormError,
@@ -86,6 +87,7 @@ export function ObservationForm({ patientId }: { patientId: string }) {
         setError(typeof diag === "string" ? diag : JSON.stringify(diag));
         return;
       }
+      await invalidateResource("Observation");
       router.push(`/patients/${patientId}/observations`);
       router.refresh();
     } finally {

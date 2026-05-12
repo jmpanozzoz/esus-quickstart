@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { invalidateResource } from "@/lib/use-fhir";
 import {
   Field,
   FormError,
@@ -100,8 +101,8 @@ export function EncounterForm({ patients, practitioners }: { patients: Option[];
         setError(typeof diag === "string" ? diag : JSON.stringify(diag));
         return;
       }
+      await invalidateResource("Encounter");
       router.push("/encounters");
-      router.refresh();
     } finally {
       setSaving(false);
     }

@@ -17,7 +17,7 @@
  */
 "use client";
 
-import useSWR, { type SWRConfiguration } from "swr";
+import useSWR, { mutate as globalMutate, type SWRConfiguration } from "swr";
 import { fromResponse, networkError, type ApiError } from "@/lib/api-errors";
 import type { BatchRequest, BatchResponseBundle, FhirBundle, FhirResource } from "@/lib/fhir";
 
@@ -113,4 +113,27 @@ export function useFhirRead<T extends FhirResource = FhirResource>(
     revalidateOnFocus: false,
     ...options,
   });
+}
+
+/**
+ * Bust every SWR cache entry that touches the given resource type.
+ *
+ * After a successful POST/PUT/PATCH, calling this from the form's
+ * submit handler is what gets the new row into the next list-page
+ * render. Without it, SWR sees the cached `/api/fhir/Appointment?…`
+ * key from a previous visit and serves the stale bundle on
+ * `router.push("/appointments")` — `revalidateOnFocus: false` +
+ * `keepPreviousData: true` make the cache extra sticky on purpose
+ * (avoids flicker on tab switches), so creates have to invalidate
+ * explicitly.
+ *
+ * Matches both list keys (`/api/fhir/{Resource}…`) and the dashboard's
+ * `batch:` keys (whose JSON body usually mentions the resource name).
+ */
+export function invalidateResource(resource: string): Promise<unknown> {
+  return globalMutate(
+    (key) =>
+      typeof key === "string" &&
+      (key.startsWith(`/api/fhir/${resource}`) || (key.startsWith("batch:") && key.includes(`"${resource}`))),
+  );
 }
