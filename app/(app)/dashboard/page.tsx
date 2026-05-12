@@ -7,12 +7,13 @@
 export const runtime = "edge";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { StatCardsSkeleton, TableSkeleton } from "../_components/Skeleton";
 import { entries, type FhirBundle, type FhirResource } from "@/lib/fhir";
 import { type Appointment, extractRef, formatTime, isToday, statusBadgeClass } from "@/lib/fhir-appointment";
 import { formatDate, formatGender, formatName, type HumanName } from "@/lib/fhir-helpers";
 import { useAuth } from "@/lib/store";
-import { useFhirSearch } from "@/lib/use-fhir";
+import { useFhirBatch } from "@/lib/use-fhir";
 
 interface Patient extends FhirResource {
   resourceType: "Patient";
@@ -22,52 +23,69 @@ interface Patient extends FhirResource {
 }
 
 /**
- * The old version of this page made 8 sequential `await fhirSearch(...)`
- * calls server-side before rendering. With api.esus.health TTFB at ~400ms
- * cross-region that meant the browser saw a blank screen for 1.5–2s.
+ * Performance-tuned dashboard.
  *
- * Now every query is a `useFhirSearch` hook — they fire in parallel on
- * mount, each with its own skeleton. The header (welcome line) paints
- * immediately from the Zustand-hydrated user; stat cards swap from
- * skeleton to numbers as their queries return; the "today's schedule"
- * and "recent patients" tables do the same.
+ * The original version made 8 sequential `await fhirSearch(...)` calls
+ * server-side. The first refactor moved them to client-side SWR hooks
+ * to unblock first paint, but cross-region the 8 concurrent requests
+ * still stair-stepped to ~7s of fanned-out latency (instrumented via
+ * the Performance API on demo.esus.health). The Edge Worker → DO NYC
+ * upstream serialises HTTP/1.1 keepalive lanes under contention.
+ *
+ * Now everything goes through a single FHIR `Bundle` of type
+ * `batch` (`POST /fhir`). One round-trip, all 8 sub-queries fan out
+ * inside the API process. Stat cards + tables render together off
+ * the same response — the header (welcome line) still paints
+ * immediately from the Zustand-hydrated user.
  */
 export default function DashboardPage() {
   const user = useAuth((s) => s.user);
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date(todayStart);
-  todayEnd.setDate(todayEnd.getDate() + 1);
+  const { todayStart, todayStartIso, todayEndIso } = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    return { todayStart: start, todayStartIso: start.toISOString(), todayEndIso: end.toISOString() };
+  }, []);
 
-  const patientCount = useFhirSearch("Patient", { _summary: "count" });
-  const practitionerCount = useFhirSearch("Practitioner", { _summary: "count" });
-  const todayApptCount = useFhirSearch("Appointment", {
-    _summary: "count",
-    date: [`ge${todayStart.toISOString()}`, `lt${todayEnd.toISOString()}`],
-  });
-  const openEncounterCount = useFhirSearch("Encounter", {
-    _summary: "count",
-    status: "in-progress",
-  });
+  // One round-trip. Order matters: we read entries by index below.
+  const batch = useFhirBatch(
+    useMemo(
+      () => [
+        { method: "GET" as const, url: "Patient?_summary=count" },
+        { method: "GET" as const, url: "Practitioner?_summary=count" },
+        { method: "GET" as const, url: `Appointment?_summary=count&date=ge${todayStartIso}&date=lt${todayEndIso}` },
+        { method: "GET" as const, url: "Encounter?_summary=count&status=in-progress" },
+        { method: "GET" as const, url: "Patient?_count=5&_sort=-_lastUpdated" },
+        { method: "GET" as const, url: `Appointment?date=ge${todayStartIso}&_count=5&_sort=date` },
+        { method: "GET" as const, url: "Patient?_count=100" },
+        { method: "GET" as const, url: "Practitioner?_count=100" },
+      ],
+      [todayStartIso, todayEndIso],
+    ),
+  );
 
-  const recentPatients = useFhirSearch<Patient>("Patient", { _count: 5, _sort: "-_lastUpdated" });
-  const todayAppts = useFhirSearch<Appointment>("Appointment", {
-    date: `ge${todayStart.toISOString()}`,
-    _count: 5,
-    _sort: "date",
-  });
+  // Helper: pluck the i-th entry's resource bundle out of the batch
+  // response, typed as a FHIR search Bundle of `T`.
+  function entryAt<T extends FhirResource>(i: number): FhirBundle<T> | undefined {
+    return batch.data?.entry?.[i]?.resource as FhirBundle<T> | undefined;
+  }
 
-  // Name lookups for the schedule rows. Pulled with `_count: 100` —
-  // good enough for a small tenant; a real product would resolve names
-  // via `_include` in a single call. Kept simple here for didactic
-  // value; the speedup comes from running these in parallel.
-  const allPatients = useFhirSearch<FhirResource & { name?: HumanName[] }>("Patient", { _count: 100 });
-  const allPractitioners = useFhirSearch<FhirResource & { name?: HumanName[] }>("Practitioner", { _count: 100 });
+  const patientCountBundle = entryAt(0);
+  const practitionerCountBundle = entryAt(1);
+  const todayApptCountBundle = entryAt(2);
+  const openEncounterCountBundle = entryAt(3);
+  const recentPatientsBundle = entryAt<Patient>(4);
+  const todayApptsBundle = entryAt<Appointment>(5);
+  const allPatientsBundle = entryAt<FhirResource & { name?: HumanName[] }>(6);
+  const allPractitionersBundle = entryAt<FhirResource & { name?: HumanName[] }>(7);
 
-  const upcomingToday = (todayAppts.data ? entries(todayAppts.data) : []).filter((a) => isToday(a.start));
-  const patientNames = nameMap(allPatients.data);
-  const practitionerNames = nameMap(allPractitioners.data);
+  const ready = !!batch.data;
+  const upcomingToday = (todayApptsBundle ? entries(todayApptsBundle) : []).filter((a) => isToday(a.start));
+  const patientNames = nameMap(allPatientsBundle);
+  const practitionerNames = nameMap(allPractitionersBundle);
+  void todayStart; // kept for readability; only the ISO strings drive the keys
 
   return (
     <div className="space-y-8">
@@ -85,14 +103,14 @@ export default function DashboardPage() {
         </p>
       </header>
 
-      {patientCount.data && practitionerCount.data && todayApptCount.data && openEncounterCount.data ? (
+      {ready ? (
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Patients" value={patientCount.data.total ?? 0} href="/patients" />
-          <StatCard label="Practitioners" value={practitionerCount.data.total ?? 0} href="/practitioners" />
-          <StatCard label="Today's appointments" value={todayApptCount.data.total ?? 0} href="/appointments" />
+          <StatCard label="Patients" value={patientCountBundle?.total ?? 0} href="/patients" />
+          <StatCard label="Practitioners" value={practitionerCountBundle?.total ?? 0} href="/practitioners" />
+          <StatCard label="Today's appointments" value={todayApptCountBundle?.total ?? 0} href="/appointments" />
           <StatCard
             label="Open encounters"
-            value={openEncounterCount.data.total ?? 0}
+            value={openEncounterCountBundle?.total ?? 0}
             href="/encounters?status=in-progress"
           />
         </section>
@@ -107,7 +125,7 @@ export default function DashboardPage() {
             View all →
           </Link>
         </div>
-        {!todayAppts.data ? (
+        {!ready ? (
           <TableSkeleton rows={3} />
         ) : upcomingToday.length === 0 ? (
           <div className="rounded-lg border border-neutral-200 bg-white p-6 text-sm">
@@ -152,9 +170,9 @@ export default function DashboardPage() {
             View all →
           </Link>
         </div>
-        {!recentPatients.data ? (
+        {!ready ? (
           <TableSkeleton rows={3} />
-        ) : entries(recentPatients.data).length === 0 ? (
+        ) : !recentPatientsBundle || entries(recentPatientsBundle).length === 0 ? (
           <div className="rounded-lg border border-neutral-200 bg-white p-6 text-sm">
             <p className="font-medium text-neutral-900">No patients yet</p>
             <p className="mt-1 text-neutral-500">
@@ -166,7 +184,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <ul className="divide-y divide-neutral-100 overflow-hidden rounded-lg border border-neutral-200 bg-white">
-            {entries(recentPatients.data).map((p) => (
+            {entries(recentPatientsBundle!).map((p) => (
               <li key={p.id} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
                 <div className="min-w-0">
                   <p className="truncate font-medium text-neutral-900">{formatName(p.name)}</p>

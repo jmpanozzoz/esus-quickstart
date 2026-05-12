@@ -36,6 +36,15 @@ export function Sidebar() {
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  // Disable prefetch: Next 15 default-prefetches every
+                  // visible <Link>, which fires one full RSC SSR per
+                  // sidebar entry on viewport (7+ background requests
+                  // post-login). Cross-region those compete with the
+                  // page's own data fetches and starve them on the
+                  // Edge → API hop. Click-time fetch is fast enough
+                  // because the layout is already mounted and the
+                  // route's data is one FHIR batch.
+                  prefetch={false}
                   className={`block rounded-md px-3 py-2 text-sm transition-colors ${
                     active
                       ? "bg-neutral-900 text-white"

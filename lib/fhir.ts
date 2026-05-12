@@ -146,3 +146,49 @@ export function fhirDelete(resourceType: string, id: string): Promise<void> {
 export function entries<T extends FhirResource>(bundle: FhirBundle<T> | null | undefined): T[] {
   return bundle?.entry?.map((e) => e.resource) ?? [];
 }
+
+// ── FHIR Batch ──────────────────────────────────────────────────────────────
+//
+// A FHIR `Bundle` of `type: "batch"` lets you fan multiple sub-requests
+// out in ONE round-trip. The server processes them as it sees fit
+// (typically in parallel inside its own process) and returns a Bundle
+// of responses. Cross-region cost of N concurrent HTTP requests is
+// driven mostly by per-request connect/TLS overhead, so collapsing
+// them into one is the single biggest perf win for the dashboard's
+// 8-call fan-out: 7+ s of stair-stepped latency becomes a single
+// ~1.5 s round-trip.
+//
+// Transactions (`type: "transaction"`) wrap the same payload in
+// all-or-nothing semantics — useful for writes; for reads / counts
+// the lighter "batch" mode is enough.
+export interface BatchRequest {
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  /** Path relative to `/fhir` — e.g. `Patient?_summary=count`. */
+  url: string;
+  body?: unknown;
+}
+
+export interface BatchResponseEntry<T = unknown> {
+  resource?: T;
+  response?: { status: string; location?: string };
+}
+
+export interface BatchResponseBundle {
+  resourceType: "Bundle";
+  type: "batch-response" | "transaction-response";
+  entry: BatchResponseEntry[];
+}
+
+export function fhirBatch(requests: BatchRequest[]): Promise<BatchResponseBundle> {
+  return request<BatchResponseBundle>("/fhir", {
+    method: "POST",
+    body: JSON.stringify({
+      resourceType: "Bundle",
+      type: "batch",
+      entry: requests.map((r) => ({
+        request: { method: r.method, url: r.url },
+        ...(r.body !== undefined ? { resource: r.body } : {}),
+      })),
+    }),
+  });
+}
