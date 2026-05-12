@@ -70,10 +70,10 @@ export function practitionerRefId(enc: Encounter): string | null {
 }
 
 const TONE_CLS: Record<string, string> = {
-  active: "bg-neutral-900 text-white",
+  active: "bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200",
   done: "bg-neutral-100 text-neutral-700",
-  pending: "border border-neutral-300 text-neutral-600",
-  off: "bg-neutral-100 text-neutral-400 line-through",
+  pending: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
+  off: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200 line-through",
 };
 
 export function encounterStatusBadge(status?: EncounterStatus): string {
@@ -81,5 +81,5 @@ export function encounterStatusBadge(status?: EncounterStatus): string {
   if (status === "in-progress" || status === "arrived" || status === "triaged") tone = "active";
   else if (status === "finished") tone = "done";
   else if (status === "cancelled") tone = "off";
-  return `inline-flex items-center rounded-full px-2 py-0.5 text-[11px] ${TONE_CLS[tone]}`;
+  return `inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${TONE_CLS[tone]}`;
 }

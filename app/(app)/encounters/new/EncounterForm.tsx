@@ -7,11 +7,31 @@ import {
   FormError,
   FormSection,
   PrimaryButton,
+  QuickPicks,
   SecondaryButton,
   Select,
+  Textarea,
   TextInput,
 } from "../../_components/Field";
 import { ENCOUNTER_CLASS_OPTIONS, type EncounterStatus } from "@/lib/fhir-encounter";
+
+const COMMON_TYPES = [
+  "Annual physical",
+  "Follow-up",
+  "New consultation",
+  "Tele-consult",
+  "Urgent care",
+  "Procedure",
+] as const;
+
+const COMMON_REASONS = [
+  "Routine",
+  "Acute illness",
+  "Chronic follow-up",
+  "Injury",
+  "Lab review",
+  "Mental health",
+] as const;
 
 export interface Option {
   id: string;
@@ -90,7 +110,7 @@ export function EncounterForm({ patients, practitioners }: { patients: Option[];
   return (
     <form onSubmit={onSubmit} className="max-w-3xl space-y-8">
       <FormSection title="Participants">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Patient" required>
             <Select
               required
@@ -120,7 +140,7 @@ export function EncounterForm({ patients, practitioners }: { patients: Option[];
       </FormSection>
 
       <FormSection title="Visit">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Class" required hint="Where / how the encounter is happening.">
             <Select value={form.class} onChange={(e) => update("class", e.target.value)}>
               {ENCOUNTER_CLASS_OPTIONS.map((c) => (
@@ -144,15 +164,21 @@ export function EncounterForm({ patients, practitioners }: { patients: Option[];
             </Select>
           </Field>
         </div>
-        <Field label="Type" hint='e.g. "Annual physical", "Follow-up", "Tele-consult".'>
-          <TextInput value={form.type} onChange={(e) => update("type", e.target.value)} />
-        </Field>
-        <Field label="Reason">
+        <Field label="Visit type" hint="What kind of visit is this? Tap a common type or type your own.">
           <TextInput
-            placeholder="Chief complaint, referral reason, …"
+            placeholder="Annual physical, follow-up, …"
+            value={form.type}
+            onChange={(e) => update("type", e.target.value)}
+          />
+          <QuickPicks value={form.type} onPick={(v) => update("type", v)} options={COMMON_TYPES} />
+        </Field>
+        <Field label="Reason" hint="Chief complaint or referral reason — what brought the patient in.">
+          <Textarea
+            placeholder="Patient reports persistent headaches for the past two weeks…"
             value={form.reason}
             onChange={(e) => update("reason", e.target.value)}
           />
+          <QuickPicks value={form.reason} onPick={(v) => update("reason", v)} options={COMMON_REASONS} />
         </Field>
       </FormSection>
 

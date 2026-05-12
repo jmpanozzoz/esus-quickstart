@@ -1,11 +1,11 @@
 /**
  * Small primitives used by the create/edit forms so every form has the
- * same spacing, labels, and focus ring. Plain HTML elements — no library.
+ * same spacing, labels, and focus ring. Inputs/selects inherit border +
+ * focus styles from `globals.css` — no per-component `className` needed.
  */
+import { AlertCircle } from "lucide-react";
 import type { ReactNode } from "react";
-
-const inputCls =
-  "w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none";
+import { cn } from "@/lib/utils";
 
 export function Field({
   label,
@@ -19,23 +19,66 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <label className="block space-y-1">
-      <span className="text-sm font-medium text-neutral-800">
+    <label className="block space-y-1.5">
+      <span className="block text-xs font-medium text-neutral-700">
         {label}
-        {required ? <span className="ml-0.5 text-neutral-500">*</span> : null}
+        {required ? <span className="ml-0.5 text-rose-600">*</span> : null}
       </span>
       {children}
-      {hint ? <span className="block text-xs text-neutral-500">{hint}</span> : null}
+      {hint ? <span className="block text-[11px] leading-relaxed text-neutral-500">{hint}</span> : null}
     </label>
   );
 }
 
 export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={inputCls} />;
+  return <input {...props} />;
 }
 
 export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={inputCls} />;
+  return <select {...props} />;
+}
+
+export function Textarea({ className, rows = 3, ...rest }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea rows={rows} {...rest} className={cn("resize-y", className)} />;
+}
+
+/**
+ * Row of toggle-able chips that drive a single text value. Tapping an
+ * active chip clears the value (lets the user reset to free-text). Used
+ * inside `<Field>` directly below the input it augments.
+ */
+export function QuickPicks({
+  value,
+  onPick,
+  options,
+}: {
+  value: string;
+  onPick: (next: string) => void;
+  options: readonly string[];
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((opt) => {
+        const active = value === opt;
+        return (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => onPick(active ? "" : opt)}
+            aria-pressed={active}
+            className={cn(
+              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+              active
+                ? "bg-brand-600 text-white shadow-card"
+                : "bg-white text-neutral-700 ring-1 ring-inset ring-neutral-200 hover:bg-brand-50 hover:text-brand-700 hover:ring-brand-200",
+            )}
+          >
+            {opt}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export function PrimaryButton({
@@ -47,7 +90,7 @@ export function PrimaryButton({
     <button
       {...rest}
       disabled={loading || rest.disabled}
-      className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:opacity-50"
+      className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-card transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-300"
     >
       {loading ? "Saving…" : children}
     </button>
@@ -58,14 +101,17 @@ export function SecondaryButton(props: React.ButtonHTMLAttributes<HTMLButtonElem
   return (
     <button
       {...props}
-      className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100"
+      className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-medium text-neutral-700 ring-1 ring-inset ring-neutral-200 transition-colors hover:bg-neutral-50 hover:ring-neutral-300"
     />
   );
 }
 
 export function FormError({ children }: { children: ReactNode }) {
   return (
-    <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{children}</p>
+    <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      <p>{children}</p>
+    </div>
   );
 }
 
@@ -74,7 +120,7 @@ export function FormSection({ title, hint, children }: { title: string; hint?: s
     <section className="space-y-4">
       <div>
         <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">{title}</h2>
-        {hint ? <p className="mt-0.5 text-xs text-neutral-400">{hint}</p> : null}
+        {hint ? <p className="mt-1 text-xs text-neutral-500">{hint}</p> : null}
       </div>
       <div className="space-y-4">{children}</div>
     </section>

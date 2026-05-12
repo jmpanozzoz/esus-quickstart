@@ -1,3 +1,4 @@
+import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { type FhirResource, fhirRead } from "@/lib/fhir";
 import { PatientForm, type PatientFormState } from "../../new/PatientForm";
@@ -53,16 +54,19 @@ export default async function EditPatientPage({ params }: { params: Promise<{ id
 
   return (
     <div className="space-y-6">
+      <Link
+        href={`/patients/${id}`}
+        className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500 hover:text-brand-700"
+      >
+        <ChevronLeft className="h-3 w-3" aria-hidden="true" />
+        Patient
+      </Link>
+
       <header>
-        <p className="text-xs text-neutral-500">
-          <Link href={`/patients/${id}`} className="hover:text-neutral-700">
-            ← Patient
-          </Link>
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold text-neutral-900">Edit patient</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Edit patient</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          Sends <code className="font-mono">PUT /fhir/Patient/{id.slice(0, 8)}…</code> with the fields you change.
-          Untouched fields stay as they are.
+          Sends <code className="font-mono text-neutral-700">PUT /fhir/Patient/{id.slice(0, 8)}…</code> with the fields
+          you change. Untouched fields stay as they are.
         </p>
       </header>
 

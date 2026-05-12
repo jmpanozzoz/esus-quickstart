@@ -93,13 +93,13 @@ export function statusTone(status?: AppointmentStatus): "neutral" | "positive" |
 
 const TONE_CLS: Record<ReturnType<typeof statusTone>, string> = {
   neutral: "bg-neutral-100 text-neutral-700",
-  positive: "bg-neutral-900 text-white",
-  warning: "border border-neutral-300 text-neutral-600",
-  danger: "bg-neutral-100 text-neutral-400 line-through",
+  positive: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
+  warning: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
+  danger: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200 line-through",
 };
 
 export function statusBadgeClass(status?: AppointmentStatus): string {
-  return `inline-flex items-center rounded-full px-2 py-0.5 text-[11px] ${TONE_CLS[statusTone(status)]}`;
+  return `inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${TONE_CLS[statusTone(status)]}`;
 }
 
 export function isUpcoming(start?: string): boolean {

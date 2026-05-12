@@ -14,8 +14,8 @@ const TABS = [
 export function PatientTabs({ patientId }: { patientId: string }) {
   const pathname = usePathname();
   return (
-    <nav className="border-b border-neutral-200">
-      <ul className="flex gap-1">
+    <nav className="-mx-4 overflow-x-auto border-b border-neutral-200 sm:mx-0">
+      <ul className="flex gap-1 px-4 sm:px-0">
         {TABS.map((t) => {
           const href = t.slug ? `/patients/${patientId}/${t.slug}` : `/patients/${patientId}`;
           const active = t.slug ? pathname.endsWith(`/${t.slug}`) : pathname === `/patients/${patientId}`;
@@ -23,9 +23,9 @@ export function PatientTabs({ patientId }: { patientId: string }) {
             <li key={t.slug || "overview"}>
               <Link
                 href={href}
-                className={`-mb-px block border-b-2 px-3 py-2 text-sm transition-colors ${
+                className={`-mb-px block whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
                   active
-                    ? "border-neutral-900 text-neutral-900"
+                    ? "border-brand-600 text-brand-700"
                     : "border-transparent text-neutral-500 hover:text-neutral-800"
                 }`}
               >

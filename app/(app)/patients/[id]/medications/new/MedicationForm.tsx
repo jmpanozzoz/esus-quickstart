@@ -7,11 +7,20 @@ import {
   FormError,
   FormSection,
   PrimaryButton,
+  QuickPicks,
   SecondaryButton,
   Select,
+  Textarea,
   TextInput,
 } from "../../../../_components/Field";
 import type { MedicationRequestStatus } from "@/lib/fhir-clinical";
+
+const COMMON_DOSAGES = [
+  "1 tablet by mouth once daily",
+  "1 tablet by mouth twice daily",
+  "As needed for pain",
+  "Every 8 hours",
+] as const;
 
 interface FormState {
   medication: string;
@@ -84,12 +93,17 @@ export function MedicationForm({ patientId }: { patientId: string }) {
             onChange={(e) => update("medication", e.target.value)}
           />
         </Field>
-        <Field label="Dosage instructions" hint='Free-text, e.g. "1 tablet by mouth once daily"'>
-          <TextInput value={form.dosage} onChange={(e) => update("dosage", e.target.value)} />
-        </Field>
-        <Field label="Reason">
+        <Field label="Dosage instructions" hint="Free-text — pick a common pattern or write your own.">
           <TextInput
-            placeholder="Indication for prescribing"
+            placeholder="1 tablet by mouth once daily"
+            value={form.dosage}
+            onChange={(e) => update("dosage", e.target.value)}
+          />
+          <QuickPicks value={form.dosage} onPick={(v) => update("dosage", v)} options={COMMON_DOSAGES} />
+        </Field>
+        <Field label="Reason" hint="Why is this medication being prescribed?">
+          <TextInput
+            placeholder="Hypertension, post-op pain, …"
             value={form.reason}
             onChange={(e) => update("reason", e.target.value)}
           />
@@ -97,7 +111,7 @@ export function MedicationForm({ patientId }: { patientId: string }) {
       </FormSection>
 
       <FormSection title="Order">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Status" required>
             <Select value={form.status} onChange={(e) => update("status", e.target.value as MedicationRequestStatus)}>
               <option value="active">Active</option>
@@ -116,8 +130,8 @@ export function MedicationForm({ patientId }: { patientId: string }) {
             </Select>
           </Field>
         </div>
-        <Field label="Note">
-          <TextInput value={form.note} onChange={(e) => update("note", e.target.value)} />
+        <Field label="Note" hint="Anything else worth recording — pharmacist remarks, special instructions.">
+          <Textarea value={form.note} onChange={(e) => update("note", e.target.value)} />
         </Field>
       </FormSection>
 

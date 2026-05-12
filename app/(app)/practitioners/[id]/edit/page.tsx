@@ -1,3 +1,4 @@
+import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { type FhirResource, fhirRead } from "@/lib/fhir";
 import { PractitionerForm, type PractitionerFormState } from "../../new/PractitionerForm";
@@ -43,15 +44,19 @@ export default async function EditPractitionerPage({ params }: { params: Promise
 
   return (
     <div className="space-y-6">
+      <Link
+        href="/practitioners"
+        className="inline-flex items-center gap-1 text-xs font-medium text-neutral-500 hover:text-brand-700"
+      >
+        <ChevronLeft className="h-3 w-3" aria-hidden="true" />
+        Practitioners
+      </Link>
+
       <header>
-        <p className="text-xs text-neutral-500">
-          <Link href="/practitioners" className="hover:text-neutral-700">
-            ← Practitioners
-          </Link>
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold text-neutral-900">Edit practitioner</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Edit practitioner</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          Sends <code className="font-mono">PUT /fhir/Practitioner/{id.slice(0, 8)}…</code> with the fields you change.
+          Sends <code className="font-mono text-neutral-700">PUT /fhir/Practitioner/{id.slice(0, 8)}…</code> with the
+          fields you change.
         </p>
       </header>
 

@@ -92,8 +92,8 @@ export default async function PatientOverviewPage({ params }: { params: Promise<
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-5">
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">{title}</h2>
+    <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-card">
+      <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">{title}</h2>
       {children}
     </div>
   );

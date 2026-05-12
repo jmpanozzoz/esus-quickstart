@@ -9,6 +9,7 @@ import {
   PrimaryButton,
   SecondaryButton,
   Select,
+  Textarea,
   TextInput,
 } from "../../../../_components/Field";
 import {
@@ -84,7 +85,7 @@ export function ConditionForm({ patientId }: { patientId: string }) {
         <Field label="Condition" required hint='e.g. "Type 2 diabetes", "Hypertension"'>
           <TextInput required autoFocus value={form.code} onChange={(e) => update("code", e.target.value)} />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Clinical status" required>
             <Select
               value={form.clinicalStatus}
@@ -111,7 +112,7 @@ export function ConditionForm({ patientId }: { patientId: string }) {
       </FormSection>
 
       <FormSection title="Timeline">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Onset" hint="When the patient started experiencing this.">
             <TextInput
               type="date"
@@ -127,8 +128,8 @@ export function ConditionForm({ patientId }: { patientId: string }) {
             />
           </Field>
         </div>
-        <Field label="Note">
-          <TextInput value={form.note} onChange={(e) => update("note", e.target.value)} />
+        <Field label="Note" hint="Optional clinical context — observations, related events, plan of care.">
+          <Textarea value={form.note} onChange={(e) => update("note", e.target.value)} />
         </Field>
       </FormSection>
 
