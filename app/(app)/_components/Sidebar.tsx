@@ -28,7 +28,7 @@ export function Sidebar() {
         <p className="mt-0.5 text-[11px] uppercase tracking-wider text-neutral-500">Esus BaaS demo</p>
       </div>
 
-      <nav className="flex-1 px-2">
+      <nav className="min-h-0 flex-1 overflow-y-auto px-2">
         <ul className="space-y-0.5">
           {NAV.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
