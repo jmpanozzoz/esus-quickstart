@@ -6,17 +6,27 @@
  * Use this from server components / route handlers. For browser code,
  * hit /api/fhir/[...path] (the proxy in app/api/fhir) which forwards
  * through this module so the same auth posture applies.
+ *
+ * All non-2xx responses throw an `ApiError` (see `lib/api-errors.ts`)
+ * — same class the SWR hooks in `lib/use-fhir.ts` throw, so a single
+ * error boundary or toast handler covers every code path.
  */
+
+import { ApiError, fromResponse, networkError } from "./api-errors";
 
 const API = process.env.ESUS_API_URL;
 const APP_ID = process.env.ESUS_APP_ID;
 const KEY_ID = process.env.ESUS_API_KEY_ID;
 const KEY_SECRET = process.env.ESUS_API_KEY_SECRET;
 
-export interface FhirError {
-  status: number;
-  body: unknown;
-}
+/**
+ * @deprecated Kept as a re-export so old call sites that referenced
+ * `FhirError` still compile. New code should import `ApiError` from
+ * `lib/api-errors` — it carries richer fields (`userMessage`,
+ * `fieldErrors`, `kind`) and lines up with the SWR side.
+ */
+export type FhirError = ApiError;
+export { ApiError };
 
 export interface FhirBundle<T = FhirResource> {
   resourceType: "Bundle";
@@ -62,27 +72,25 @@ async function request<T>(
         }),
       ).toString()
     : "";
-  const res = await fetch(`${API}${path}${qs}`, {
-    ...rest,
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-      ...(rest.headers as Record<string, string> | undefined),
-    },
-    cache: "no-store",
-  });
-  const text = await res.text();
-  let parsed: unknown;
+  let res: Response;
   try {
-    parsed = text ? JSON.parse(text) : null;
-  } catch {
-    parsed = text;
+    res = await fetch(`${API}${path}${qs}`, {
+      ...rest,
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(),
+        ...(rest.headers as Record<string, string> | undefined),
+      },
+      cache: "no-store",
+    });
+  } catch (cause) {
+    // DNS / TCP / CORS — no Response object. Funnel through the same
+    // `ApiError` shape SWR throws so callers don't need to distinguish.
+    throw networkError(cause);
   }
-  if (!res.ok) {
-    const err: FhirError = { status: res.status, body: parsed };
-    throw err;
-  }
-  return parsed as T;
+  if (!res.ok) throw await fromResponse(res);
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
 }
 
 export function fhirSearch<T extends FhirResource = FhirResource>(

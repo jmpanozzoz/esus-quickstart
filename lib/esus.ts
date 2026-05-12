@@ -19,10 +19,14 @@ if (!API || !APP_ID) {
   console.warn("[esus] ESUS_API_URL or ESUS_APP_ID is missing — copy .env.example to .env.local");
 }
 
-export interface EsusError {
-  status: number;
-  body: unknown;
-}
+import { ApiError, fromResponse, networkError } from "./api-errors";
+
+/**
+ * @deprecated Use `ApiError` from `lib/api-errors`. Kept as a re-export
+ * so old call sites compile while we migrate.
+ */
+export type EsusError = ApiError;
+export { ApiError };
 
 async function call<T>(path: string, init: RequestInit & { auth?: string } = {}): Promise<T> {
   const headers: Record<string, string> = {
@@ -32,19 +36,15 @@ async function call<T>(path: string, init: RequestInit & { auth?: string } = {})
   };
   if (init.auth) headers["Authorization"] = `Bearer ${init.auth}`;
 
-  const res = await fetch(`${API}${path}`, { ...init, headers, cache: "no-store" });
-  const text = await res.text();
-  let parsed: unknown;
+  let res: Response;
   try {
-    parsed = text ? JSON.parse(text) : null;
-  } catch {
-    parsed = text;
+    res = await fetch(`${API}${path}`, { ...init, headers, cache: "no-store" });
+  } catch (cause) {
+    throw networkError(cause);
   }
-  if (!res.ok) {
-    const err: EsusError = { status: res.status, body: parsed };
-    throw err;
-  }
-  return parsed as T;
+  if (!res.ok) throw await fromResponse(res);
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
 }
 
 // ── Tenant auth ─────────────────────────────────────────────────────────────

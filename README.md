@@ -25,17 +25,54 @@ End-user tokens never touch the browser. The API key never touches the browser. 
 |---|---|
 | `lib/esus.ts` | Tenant auth helpers (signup, verify, login, `/me`) |
 | `lib/fhir.ts` | Generic `fhirSearch / fhirRead / fhirCreate / fhirUpdate / fhirDelete` over `/fhir/*` with API-key auth |
+| `lib/use-fhir.ts` | SWR hooks (`useFhirSearch`, `useFhirRead`) for client-side fetching with skeletons + cache |
+| `lib/api-client.ts` | Fully-typed `apiClient` built from the auto-generated OpenAPI paths — use when you want IDE completion on every endpoint, header, and response shape |
+| `lib/api-errors.ts` | Single `ApiError` class every helper throws — `userMessage`, `fieldErrors`, FHIR `OperationOutcome` parsed |
 | `lib/auth.ts` | `requireSession()` — the single auth gate used by the `(app)` layout |
 | `lib/session.ts` | httpOnly cookie helpers |
+| `lib/store.ts` | Zustand auth store (`useAuth`) hydrated from the layout's SSR `/v1/auth/me` so client pages don't re-fetch |
 | `app/api/auth/*` | Route handlers proxying the auth flow |
 | `app/api/fhir/[...path]` | Browser → server FHIR proxy (forwards with API key, requires a session) |
 
-Add a new resource (e.g. `Encounter`) in three lines:
+### Two ways to talk to the API
+
+**Simple / didactic** — server components, hand-curated types:
 
 ```tsx
 import { fhirSearch, entries } from "@/lib/fhir";
 const bundle = await fhirSearch("Encounter", { _count: 50 });
 const rows = entries(bundle);
+```
+
+**Fully typed** — auto-completion on every endpoint, query param, and response shape:
+
+```tsx
+import { apiClient } from "@/lib/api-client";
+const { data } = await apiClient.GET("/fhir/Encounter", {
+  params: { query: { _count: 50 } },
+});
+```
+
+Regenerate the types after the API changes:
+
+```bash
+npm run generate-api
+```
+
+### Errors
+
+Every helper above throws a single `ApiError` (`lib/api-errors.ts`). Use `err.userMessage` for a friendly fallback, `err.diagnostic` for the server's exact FHIR diagnostic, and `err.fieldErrors` for per-field 422 messages:
+
+```tsx
+import { isApiError } from "@/lib/api-errors";
+
+try { ... }
+catch (err) {
+  if (isApiError(err)) {
+    if (err.kind === "validation") showFieldErrors(err.fieldErrors);
+    else toast.error(err.userMessage);
+  }
+}
 ```
 
 ## Setup
