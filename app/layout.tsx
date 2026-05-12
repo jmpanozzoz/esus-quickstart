@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   },
   description:
     "A reference Next.js app showing what a full Esus BaaS integration looks like — tenant auth, FHIR data plane, and a clean shell to build on.",
+  // Served from `public/icon.svg` (not `app/icon.svg`) because the
+  // app-router metadata icon convention generates a route that
+  // `@cloudflare/next-on-pages` rejects without `runtime = "edge"`.
+  // Wiring it as a public static asset side-steps the codegen entirely.
+  icons: { icon: "/icon.svg" },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
