@@ -1,4 +1,5 @@
-import { type EsusError, login } from "@/lib/esus";
+import { isApiError } from "@/lib/api-errors";
+import { login } from "@/lib/esus";
 import { setTokens } from "@/lib/session";
 import { NextResponse } from "next/server";
 
@@ -25,12 +26,12 @@ export async function POST(req: Request) {
     await setTokens(tokens.accessToken, tokens.refreshToken, tokens.expiresIn);
     return NextResponse.json({ success: true });
   } catch (err) {
-    const e = err as EsusError;
-    const detail =
-      typeof e.body === "object" && e.body && "issue" in e.body
-        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (e.body as any).issue?.[0]?.diagnostics
-        : undefined;
-    return NextResponse.json({ error: detail ?? `Login failed (${e.status ?? 500})` }, { status: e.status ?? 500 });
+    if (isApiError(err)) {
+      return NextResponse.json(
+        { error: err.diagnostic ?? err.userMessage, fieldErrors: err.fieldErrors },
+        { status: err.status || 500 },
+      );
+    }
+    return NextResponse.json({ error: "Login failed" }, { status: 500 });
   }
 }

@@ -10,7 +10,8 @@
  *   2. When you add Cloudflare Turnstile, the bypass + verification
  *      logic lives here, not scattered in client components.
  */
-import { type EsusError, signup } from "@/lib/esus";
+import { isApiError } from "@/lib/api-errors";
+import { signup } from "@/lib/esus";
 import { NextResponse } from "next/server";
 
 // Required by @cloudflare/next-on-pages — every route handler ships
@@ -34,13 +35,16 @@ export async function POST(req: Request) {
     const result = await signup({ email: body.email, password: body.password });
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
-    const e = err as EsusError;
-    const detail =
-      typeof e.body === "object" && e.body && "issue" in e.body
-        ? // Esus returns FHIR OperationOutcome; surface the first diagnostic.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (e.body as any).issue?.[0]?.diagnostics
-        : undefined;
-    return NextResponse.json({ error: detail ?? `Sign-up failed (${e.status ?? 500})` }, { status: e.status ?? 500 });
+    // `ApiError` carries the parsed FHIR diagnostic + a friendly
+    // fallback. Prefer the server's diagnostic when present (e.g.
+    // "Email already registered"); otherwise fall back to the
+    // kind-keyed `userMessage`.
+    if (isApiError(err)) {
+      return NextResponse.json(
+        { error: err.diagnostic ?? err.userMessage, fieldErrors: err.fieldErrors },
+        { status: err.status || 500 },
+      );
+    }
+    return NextResponse.json({ error: "Sign-up failed" }, { status: 500 });
   }
 }

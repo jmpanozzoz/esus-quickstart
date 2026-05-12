@@ -18,24 +18,22 @@
 "use client";
 
 import useSWR, { type SWRConfiguration } from "swr";
+import { fromResponse, networkError, type ApiError } from "@/lib/api-errors";
 import type { FhirBundle, FhirResource } from "@/lib/fhir";
 
 async function fhirFetcher<T = unknown>(url: string): Promise<T> {
-  const res = await fetch(url, { credentials: "include" });
-  if (!res.ok) {
-    // Surface the FHIR OperationOutcome diagnostic when present so the
-    // page can render a useful message instead of "Error".
-    let detail: string | undefined;
-    try {
-      const body = (await res.json()) as { issue?: Array<{ diagnostics?: string }> };
-      detail = body.issue?.[0]?.diagnostics;
-    } catch {
-      // non-JSON body — fall through to statusText
-    }
-    throw new Error(detail ?? `${res.status} ${res.statusText}`);
+  let res: Response;
+  try {
+    res = await fetch(url, { credentials: "include" });
+  } catch (cause) {
+    throw networkError(cause);
   }
+  if (!res.ok) throw await fromResponse(res);
   return res.json() as Promise<T>;
 }
+
+/** Re-export so consumer pages can type-narrow inside `if (error)`. */
+export type { ApiError };
 
 function buildPath(resource: string, params?: Record<string, string | number | string[] | undefined>): string {
   const usp = new URLSearchParams();
@@ -53,10 +51,10 @@ function buildPath(resource: string, params?: Record<string, string | number | s
 export function useFhirSearch<T extends FhirResource = FhirResource>(
   resource: string,
   params?: Record<string, string | number | string[] | undefined>,
-  options: SWRConfiguration<FhirBundle<T>> = {},
+  options: SWRConfiguration<FhirBundle<T>, ApiError> = {},
 ) {
   const key = buildPath(resource, params);
-  return useSWR<FhirBundle<T>>(key, fhirFetcher, {
+  return useSWR<FhirBundle<T>, ApiError>(key, fhirFetcher, {
     revalidateOnFocus: false,
     keepPreviousData: true,
     ...options,
@@ -66,10 +64,10 @@ export function useFhirSearch<T extends FhirResource = FhirResource>(
 export function useFhirRead<T extends FhirResource = FhirResource>(
   resource: string,
   id: string | null | undefined,
-  options: SWRConfiguration<T> = {},
+  options: SWRConfiguration<T, ApiError> = {},
 ) {
   const key = id ? `/api/fhir/${resource}/${id}` : null;
-  return useSWR<T>(key, fhirFetcher, {
+  return useSWR<T, ApiError>(key, fhirFetcher, {
     revalidateOnFocus: false,
     ...options,
   });

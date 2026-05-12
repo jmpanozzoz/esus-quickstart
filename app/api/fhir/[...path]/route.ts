@@ -6,16 +6,9 @@
  * Add an auth check here (`requireSession()`) so an unauthenticated
  * tab can't use the proxy as an open relay against your tenant data.
  */
+import { isApiError } from "@/lib/api-errors";
 import { requireSession } from "@/lib/auth";
-import {
-  type FhirError,
-  fhirCreate,
-  fhirDelete,
-  fhirPatch,
-  fhirRead,
-  fhirSearch,
-  fhirUpdate,
-} from "@/lib/fhir";
+import { fhirCreate, fhirDelete, fhirPatch, fhirRead, fhirSearch, fhirUpdate } from "@/lib/fhir";
 import { NextResponse } from "next/server";
 
 export const runtime = "edge";
@@ -30,8 +23,16 @@ function asObj(req: Request): Record<string, string> {
 }
 
 function errResponse(err: unknown) {
-  const e = err as FhirError;
-  return NextResponse.json(e.body ?? { error: "fhir request failed" }, { status: e.status ?? 500 });
+  if (isApiError(err)) {
+    // Forward the FHIR `OperationOutcome` verbatim when present so the
+    // SWR client-side fetcher can parse the same `diagnostics` /
+    // `expression` fields it normally would. Status mirrors the upstream.
+    return NextResponse.json(
+      err.outcome ?? { resourceType: "OperationOutcome", issue: [{ severity: "error", diagnostics: err.userMessage }] },
+      { status: err.status || 500 },
+    );
+  }
+  return NextResponse.json({ error: "fhir request failed" }, { status: 500 });
 }
 
 export async function GET(req: Request, ctx: Ctx) {
