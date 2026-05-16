@@ -36,11 +36,14 @@ function errResponse(err: unknown) {
 }
 
 export async function GET(req: Request, ctx: Ctx) {
-  await requireSession();
+  const session = await requireSession();
   const { path } = await ctx.params;
   const [resourceType, id] = path;
+  const opts = session.user.patientId ? { appUserId: session.user.id } : undefined;
   try {
-    const data = id ? await fhirRead(resourceType, id) : await fhirSearch(resourceType, asObj(req));
+    const data = id
+      ? await fhirRead(resourceType, id, opts)
+      : await fhirSearch(resourceType, asObj(req), opts);
     return NextResponse.json(data);
   } catch (err) {
     return errResponse(err);
@@ -48,12 +51,13 @@ export async function GET(req: Request, ctx: Ctx) {
 }
 
 export async function POST(req: Request, ctx: Ctx) {
-  await requireSession();
+  const session = await requireSession();
   const { path } = await ctx.params;
   const [resourceType] = path;
+  const opts = session.user.patientId ? { appUserId: session.user.id } : undefined;
   try {
     const body = await req.json();
-    const data = await fhirCreate(resourceType, body);
+    const data = await fhirCreate(resourceType, body, opts);
     return NextResponse.json(data, { status: 201 });
   } catch (err) {
     return errResponse(err);
@@ -61,12 +65,13 @@ export async function POST(req: Request, ctx: Ctx) {
 }
 
 export async function PUT(req: Request, ctx: Ctx) {
-  await requireSession();
+  const session = await requireSession();
   const { path } = await ctx.params;
   const [resourceType, id] = path;
+  const opts = session.user.patientId ? { appUserId: session.user.id } : undefined;
   try {
     const body = await req.json();
-    const data = await fhirUpdate(resourceType, id, body);
+    const data = await fhirUpdate(resourceType, id, body, opts);
     return NextResponse.json(data);
   } catch (err) {
     return errResponse(err);
@@ -74,12 +79,13 @@ export async function PUT(req: Request, ctx: Ctx) {
 }
 
 export async function PATCH(req: Request, ctx: Ctx) {
-  await requireSession();
+  const session = await requireSession();
   const { path } = await ctx.params;
   const [resourceType, id] = path;
+  const opts = session.user.patientId ? { appUserId: session.user.id } : undefined;
   try {
     const body = await req.json();
-    const data = await fhirPatch(resourceType, id, body);
+    const data = await fhirPatch(resourceType, id, body, opts);
     return NextResponse.json(data);
   } catch (err) {
     return errResponse(err);
@@ -87,11 +93,12 @@ export async function PATCH(req: Request, ctx: Ctx) {
 }
 
 export async function DELETE(_req: Request, ctx: Ctx) {
-  await requireSession();
+  const session = await requireSession();
   const { path } = await ctx.params;
   const [resourceType, id] = path;
+  const opts = session.user.patientId ? { appUserId: session.user.id } : undefined;
   try {
-    await fhirDelete(resourceType, id);
+    await fhirDelete(resourceType, id, opts);
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     return errResponse(err);

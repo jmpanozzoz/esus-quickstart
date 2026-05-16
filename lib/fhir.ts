@@ -42,26 +42,34 @@ export interface FhirResource {
   meta?: { versionId?: string; lastUpdated?: string };
 }
 
-function authHeaders(): Record<string, string> {
+/** Options accepted by all server-side FHIR helpers. */
+export interface FhirCallOptions {
+  /** When set, forwards X-App-User-Id so the API enforces patient-scoped access. */
+  appUserId?: string;
+}
+
+function authHeaders(appUserId?: string): Record<string, string> {
   if (!API || !APP_ID || !CLIENT_ID || !KEY_SECRET) {
     throw new Error(
       "[fhir] Missing env: ESUS_API_URL / ESUS_APP_ID / ESUS_API_KEY_CLIENT_ID / ESUS_API_KEY_SECRET",
     );
   }
-  return {
+  const headers: Record<string, string> = {
     "X-Api-Key": `${CLIENT_ID}:${KEY_SECRET}`,
     "X-App-Id": APP_ID,
     Accept: "application/fhir+json, application/json",
   };
+  if (appUserId) headers["X-App-User-Id"] = appUserId;
+  return headers;
 }
 
 type QueryParams = Record<string, string | number | string[] | undefined>;
 
 async function request<T>(
   path: string,
-  init: RequestInit & { query?: QueryParams } = {},
+  init: RequestInit & { query?: QueryParams; appUserId?: string } = {},
 ): Promise<T> {
-  const { query, ...rest } = init;
+  const { query, appUserId, ...rest } = init;
   const qs = query
     ? "?" +
       new URLSearchParams(
@@ -78,7 +86,7 @@ async function request<T>(
       ...rest,
       headers: {
         "Content-Type": "application/json",
-        ...authHeaders(),
+        ...authHeaders(appUserId),
         ...(rest.headers as Record<string, string> | undefined),
       },
       cache: "no-store",
@@ -96,24 +104,28 @@ async function request<T>(
 export function fhirSearch<T extends FhirResource = FhirResource>(
   resourceType: string,
   params?: QueryParams,
+  opts?: FhirCallOptions,
 ): Promise<FhirBundle<T>> {
-  return request<FhirBundle<T>>(`/fhir/${resourceType}`, { query: params });
+  return request<FhirBundle<T>>(`/fhir/${resourceType}`, { query: params, appUserId: opts?.appUserId });
 }
 
 export function fhirRead<T extends FhirResource = FhirResource>(
   resourceType: string,
   id: string,
+  opts?: FhirCallOptions,
 ): Promise<T> {
-  return request<T>(`/fhir/${resourceType}/${id}`);
+  return request<T>(`/fhir/${resourceType}/${id}`, { appUserId: opts?.appUserId });
 }
 
 export function fhirCreate<T extends FhirResource = FhirResource>(
   resourceType: string,
   resource: Partial<T> & { resourceType: string },
+  opts?: FhirCallOptions,
 ): Promise<T> {
   return request<T>(`/fhir/${resourceType}`, {
     method: "POST",
     body: JSON.stringify(resource),
+    appUserId: opts?.appUserId,
   });
 }
 
@@ -121,10 +133,12 @@ export function fhirUpdate<T extends FhirResource = FhirResource>(
   resourceType: string,
   id: string,
   resource: Partial<T> & { resourceType: string; id: string },
+  opts?: FhirCallOptions,
 ): Promise<T> {
   return request<T>(`/fhir/${resourceType}/${id}`, {
     method: "PUT",
     body: JSON.stringify(resource),
+    appUserId: opts?.appUserId,
   });
 }
 
@@ -132,15 +146,17 @@ export function fhirPatch<T extends FhirResource = FhirResource>(
   resourceType: string,
   id: string,
   patch: Partial<T>,
+  opts?: FhirCallOptions,
 ): Promise<T> {
   return request<T>(`/fhir/${resourceType}/${id}`, {
     method: "PATCH",
     body: JSON.stringify(patch),
+    appUserId: opts?.appUserId,
   });
 }
 
-export function fhirDelete(resourceType: string, id: string): Promise<void> {
-  return request<void>(`/fhir/${resourceType}/${id}`, { method: "DELETE" });
+export function fhirDelete(resourceType: string, id: string, opts?: FhirCallOptions): Promise<void> {
+  return request<void>(`/fhir/${resourceType}/${id}`, { method: "DELETE", appUserId: opts?.appUserId });
 }
 
 export function entries<T extends FhirResource>(bundle: FhirBundle<T> | null | undefined): T[] {
@@ -179,7 +195,7 @@ export interface BatchResponseBundle {
   entry: BatchResponseEntry[];
 }
 
-export function fhirBatch(requests: BatchRequest[]): Promise<BatchResponseBundle> {
+export function fhirBatch(requests: BatchRequest[], opts?: FhirCallOptions): Promise<BatchResponseBundle> {
   return request<BatchResponseBundle>("/fhir", {
     method: "POST",
     body: JSON.stringify({
@@ -190,5 +206,6 @@ export function fhirBatch(requests: BatchRequest[]): Promise<BatchResponseBundle
         ...(r.body !== undefined ? { resource: r.body } : {}),
       })),
     }),
+    appUserId: opts?.appUserId,
   });
 }
