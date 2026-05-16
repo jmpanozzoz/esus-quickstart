@@ -130,16 +130,19 @@ export function TextInput({ size, intent, className, ...rest }: TextInputProps) 
 
 // ── <NumberInput> ───────────────────────────────────────────────────────────
 
-export function NumberInput({ className, ...rest }: TextInputProps) {
+export function NumberInput({ className, size, intent, ...rest }: TextInputProps) {
   // Hide the native spinner with `appearance-none` + Firefox-specific tweak,
   // because the up/down chevrons don't fit our visual language and a stepper
   // belongs on the `<QuickPicks>` row anyway.
+  // `size` and `intent` are destructured so they don't end up in `rest` —
+  // spreading our ControlSize string into the native <input size={number}>
+  // attr causes a TS type error in strict-mode builds.
   return (
     <input
       type="number"
       {...rest}
       className={cn(
-        controlClasses({ size: rest.size as ControlSize | undefined, intent: rest.intent, className }),
+        controlClasses({ size, intent, className }),
         "appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [-moz-appearance:textfield]",
       )}
     />
