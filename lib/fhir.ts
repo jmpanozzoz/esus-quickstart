@@ -16,7 +16,7 @@ import { ApiError, fromResponse, networkError } from "./api-errors";
 
 const API = process.env.ESUS_API_URL;
 const APP_ID = process.env.ESUS_APP_ID;
-const KEY_ID = process.env.ESUS_API_KEY_ID;
+const CLIENT_ID = process.env.ESUS_API_KEY_CLIENT_ID;
 const KEY_SECRET = process.env.ESUS_API_KEY_SECRET;
 
 /**
@@ -43,13 +43,13 @@ export interface FhirResource {
 }
 
 function authHeaders(): Record<string, string> {
-  if (!API || !APP_ID || !KEY_ID || !KEY_SECRET) {
+  if (!API || !APP_ID || !CLIENT_ID || !KEY_SECRET) {
     throw new Error(
-      "[fhir] Missing env: ESUS_API_URL / ESUS_APP_ID / ESUS_API_KEY_ID / ESUS_API_KEY_SECRET",
+      "[fhir] Missing env: ESUS_API_URL / ESUS_APP_ID / ESUS_API_KEY_CLIENT_ID / ESUS_API_KEY_SECRET",
     );
   }
   return {
-    "X-Api-Key": `${KEY_ID}:${KEY_SECRET}`,
+    "X-Api-Key": `${CLIENT_ID}:${KEY_SECRET}`,
     "X-App-Id": APP_ID,
     Accept: "application/fhir+json, application/json",
   };

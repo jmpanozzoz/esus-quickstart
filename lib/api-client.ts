@@ -23,10 +23,10 @@ import type { paths } from "./api-types";
 
 const API = process.env.ESUS_API_URL;
 const APP_ID = process.env.ESUS_APP_ID;
-const KEY_ID = process.env.ESUS_API_KEY_ID;
+const CLIENT_ID = process.env.ESUS_API_KEY_CLIENT_ID;
 const KEY_SECRET = process.env.ESUS_API_KEY_SECRET;
 
-if (typeof window === "undefined" && (!API || !APP_ID || !KEY_ID || !KEY_SECRET)) {
+if (typeof window === "undefined" && (!API || !APP_ID || !CLIENT_ID || !KEY_SECRET)) {
   // Server-side only — env vars never reach the browser. The warning
   // fires at import time so a missing var surfaces on the first
   // request, not after a confusing 401.
@@ -45,7 +45,7 @@ if (typeof window === "undefined" && (!API || !APP_ID || !KEY_ID || !KEY_SECRET)
 export const apiClient = createClient<paths>({
   baseUrl: API,
   headers: {
-    "X-Api-Key": KEY_ID && KEY_SECRET ? `${KEY_ID}:${KEY_SECRET}` : "",
+    "X-Api-Key": CLIENT_ID && KEY_SECRET ? `${CLIENT_ID}:${KEY_SECRET}` : "",
     "X-App-Id": APP_ID ?? "",
   },
 });

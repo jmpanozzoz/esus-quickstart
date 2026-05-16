@@ -90,8 +90,8 @@ cp .env.example .env.local
 ```bash
 ESUS_API_URL=https://api.esus.health        # or http://localhost:3000 for local dev
 ESUS_APP_ID=app_a3f1b9…                     # from the app's Overview tab
-ESUS_API_KEY_ID=…                           # API key client id
-ESUS_API_KEY_SECRET=…                       # the secret shown at creation
+ESUS_API_KEY_CLIENT_ID=…                    # the API key's `clientId` (32 hex chars)
+ESUS_API_KEY_SECRET=…                       # the secret shown ONCE at creation
 ```
 
 ### 3. Run
