@@ -12,7 +12,7 @@ import {
   Select,
   Textarea,
   TextInput,
-} from "../../../../_components/Field";
+} from "@/app/_components/Field";
 import {
   CONDITION_CLINICAL_OPTIONS,
   CONDITION_SEVERITY_OPTIONS,

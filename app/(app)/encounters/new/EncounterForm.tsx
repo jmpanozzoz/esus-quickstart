@@ -13,7 +13,7 @@ import {
   Select,
   Textarea,
   TextInput,
-} from "../../_components/Field";
+} from "@/app/_components/Field";
 import { ENCOUNTER_CLASS_OPTIONS, type EncounterStatus } from "@/lib/fhir-encounter";
 
 const COMMON_TYPES = [

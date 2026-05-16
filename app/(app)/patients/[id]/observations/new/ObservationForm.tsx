@@ -12,7 +12,7 @@ import {
   Select,
   Textarea,
   TextInput,
-} from "../../../../_components/Field";
+} from "@/app/_components/Field";
 import { OBSERVATION_QUICK, type ObservationStatus } from "@/lib/fhir-clinical";
 
 interface FormState {

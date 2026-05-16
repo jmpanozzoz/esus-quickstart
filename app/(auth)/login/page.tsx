@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowRight, AlertCircle } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { Field, FormError, TextInput } from "@/app/_components/Field";
 
 function LoginForm() {
   const router = useRouter();
@@ -48,9 +49,8 @@ function LoginForm() {
       </header>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-4">
-        <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-neutral-700">Email</span>
-          <input
+        <Field label="Email" required>
+          <TextInput
             type="email"
             required
             autoFocus
@@ -59,25 +59,19 @@ function LoginForm() {
             placeholder="you@example.com"
             autoComplete="email"
           />
-        </label>
+        </Field>
 
-        <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-neutral-700">Password</span>
-          <input
+        <Field label="Password" required>
+          <TextInput
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
           />
-        </label>
+        </Field>
 
-        {error && (
-          <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <p>{error}</p>
-          </div>
-        )}
+        {error && <FormError>{error}</FormError>}
 
         <button
           type="submit"

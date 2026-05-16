@@ -1,9 +1,10 @@
 "use client";
 
-import { AlertCircle, ArrowRight, MailCheck } from "lucide-react";
+import { ArrowRight, MailCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { Field, FormError, TextInput } from "@/app/_components/Field";
 
 function VerifyForm() {
   const router = useRouter();
@@ -70,9 +71,8 @@ function VerifyForm() {
       </header>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-4">
-        <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-neutral-700">Email</span>
-          <input
+        <Field label="Email" required>
+          <TextInput
             type="email"
             required
             value={email}
@@ -80,11 +80,10 @@ function VerifyForm() {
             placeholder="you@example.com"
             autoComplete="email"
           />
-        </label>
+        </Field>
 
-        <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-neutral-700">Verification code</span>
-          <input
+        <Field label="Verification code" required>
+          <TextInput
             type="text"
             inputMode="numeric"
             pattern="[0-9]{6}"
@@ -93,17 +92,12 @@ function VerifyForm() {
             autoFocus={!!initialEmail}
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-            className="text-center !text-lg font-mono tracking-[0.4em]"
+            className="text-center text-lg font-mono tracking-[0.4em]"
             placeholder="••••••"
           />
-        </label>
+        </Field>
 
-        {error && (
-          <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <p>{error}</p>
-          </div>
-        )}
+        {error && <FormError>{error}</FormError>}
 
         <button
           type="submit"
