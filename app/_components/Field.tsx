@@ -116,7 +116,10 @@ export function Field({
 
 // ── <TextInput> ─────────────────────────────────────────────────────────────
 
-export interface TextInputProps extends InputHTMLAttributes<HTMLInputElement> {
+// Omit the native HTML `size` attribute (a number, used for visible-char
+// width on older browsers) so we can safely shadow it with our own
+// `ControlSize` string prop without a TypeScript interface conflict.
+export interface TextInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
   size?: ControlSize;
   intent?: ControlIntent;
 }
@@ -145,7 +148,8 @@ export function NumberInput({ className, ...rest }: TextInputProps) {
 
 // ── <Select> ────────────────────────────────────────────────────────────────
 
-export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+// Same `Omit<..., "size">` pattern: HTMLSelectElement also has size?: number.
+export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "size"> {
   size?: ControlSize;
   intent?: ControlIntent;
 }
