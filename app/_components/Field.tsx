@@ -30,7 +30,7 @@
  *   <FormSection>    – titled section divider
  */
 import { AlertCircle } from "lucide-react";
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 // ── Shared class fragments ──────────────────────────────────────────────────
@@ -265,7 +265,7 @@ export function PrimaryButton({
   children,
   loading,
   ...rest
-}: InputHTMLAttributes<HTMLButtonElement> & { loading?: boolean; children: ReactNode }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean; children: ReactNode }) {
   return (
     <button
       {...rest}
@@ -277,7 +277,7 @@ export function PrimaryButton({
   );
 }
 
-export function SecondaryButton(props: InputHTMLAttributes<HTMLButtonElement>) {
+export function SecondaryButton(props: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       {...props}
