@@ -1,9 +1,10 @@
 "use client";
 
-import { AlertCircle, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Field, FormError, TextInput } from "@/app/_components/Field";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -48,9 +49,8 @@ export default function SignupPage() {
       </header>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-4">
-        <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-neutral-700">Email</span>
-          <input
+        <Field label="Email" required>
+          <TextInput
             type="email"
             required
             autoFocus
@@ -59,28 +59,23 @@ export default function SignupPage() {
             placeholder="you@example.com"
             autoComplete="email"
           />
-        </label>
+        </Field>
 
-        <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-neutral-700">Password</span>
-          <input
+        <Field
+          label="Password"
+          required
+          hint="12+ characters with upper, lower, number, and a special character. We also check against known-breached lists."
+        >
+          <TextInput
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
           />
-          <p className="text-[11px] leading-relaxed text-neutral-500">
-            12+ characters with upper, lower, number, and a special character. We also check against known-breached lists.
-          </p>
-        </label>
+        </Field>
 
-        {error && (
-          <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <p>{error}</p>
-          </div>
-        )}
+        {error && <FormError>{error}</FormError>}
 
         <button
           type="submit"

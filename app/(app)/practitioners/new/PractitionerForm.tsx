@@ -12,7 +12,7 @@ import {
   SecondaryButton,
   Select,
   TextInput,
-} from "../../_components/Field";
+} from "@/app/_components/Field";
 
 export interface PractitionerFormState {
   given: string;
