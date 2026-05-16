@@ -30,7 +30,7 @@
  *   <FormSection>    – titled section divider
  */
 import { AlertCircle } from "lucide-react";
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 // ── Shared class fragments ──────────────────────────────────────────────────
@@ -116,7 +116,10 @@ export function Field({
 
 // ── <TextInput> ─────────────────────────────────────────────────────────────
 
-export interface TextInputProps extends InputHTMLAttributes<HTMLInputElement> {
+// Omit the native HTML `size` attribute (a number, used for visible-char
+// width on older browsers) so we can safely shadow it with our own
+// `ControlSize` string prop without a TypeScript interface conflict.
+export interface TextInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
   size?: ControlSize;
   intent?: ControlIntent;
 }
@@ -127,16 +130,19 @@ export function TextInput({ size, intent, className, ...rest }: TextInputProps) 
 
 // ── <NumberInput> ───────────────────────────────────────────────────────────
 
-export function NumberInput({ className, ...rest }: TextInputProps) {
+export function NumberInput({ className, size, intent, ...rest }: TextInputProps) {
   // Hide the native spinner with `appearance-none` + Firefox-specific tweak,
   // because the up/down chevrons don't fit our visual language and a stepper
   // belongs on the `<QuickPicks>` row anyway.
+  // `size` and `intent` are destructured so they don't end up in `rest` —
+  // spreading our ControlSize string into the native <input size={number}>
+  // attr causes a TS type error in strict-mode builds.
   return (
     <input
       type="number"
       {...rest}
       className={cn(
-        controlClasses({ size: rest.size as ControlSize | undefined, intent: rest.intent, className }),
+        controlClasses({ size, intent, className }),
         "appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [-moz-appearance:textfield]",
       )}
     />
@@ -145,7 +151,8 @@ export function NumberInput({ className, ...rest }: TextInputProps) {
 
 // ── <Select> ────────────────────────────────────────────────────────────────
 
-export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+// Same `Omit<..., "size">` pattern: HTMLSelectElement also has size?: number.
+export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "size"> {
   size?: ControlSize;
   intent?: ControlIntent;
 }
@@ -258,7 +265,7 @@ export function PrimaryButton({
   children,
   loading,
   ...rest
-}: InputHTMLAttributes<HTMLButtonElement> & { loading?: boolean; children: ReactNode }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean; children: ReactNode }) {
   return (
     <button
       {...rest}
@@ -270,7 +277,7 @@ export function PrimaryButton({
   );
 }
 
-export function SecondaryButton(props: InputHTMLAttributes<HTMLButtonElement>) {
+export function SecondaryButton(props: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       {...props}
