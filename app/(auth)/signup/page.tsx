@@ -174,12 +174,9 @@ function SignupForm() {
           )}
         </label>
 
-        <Field
-          label="Password"
-          required
-          hint="12+ characters with upper, lower, number, and a special character. We also check against known-breached lists."
-        >
-          <TextInput
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-neutral-700">Password</span>
+          <input
             type="password"
             required
             autoFocus={inviteValid === true}
@@ -188,9 +185,17 @@ function SignupForm() {
             autoComplete="new-password"
             disabled={isInviteLoading}
           />
-        </Field>
+          <p className="text-[11px] leading-relaxed text-neutral-500">
+            12+ characters with upper, lower, number, and a special character. We also check against known-breached lists.
+          </p>
+        </label>
 
-        {error && <FormError>{error}</FormError>}
+        {error && (
+          <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <p>{error}</p>
+          </div>
+        )}
 
         <button
           type="submit"
