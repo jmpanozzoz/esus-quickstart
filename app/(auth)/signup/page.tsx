@@ -77,6 +77,12 @@ function SignupForm() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
+        if (res.status === 409) {
+          // Org-level identity: same email = same person. Redirect to login.
+          const loginUrl = `/login?email=${encodeURIComponent(email)}`;
+          window.location.href = loginUrl;
+          return;
+        }
         setError(body?.error ?? `Sign-up failed (${res.status})`);
         return;
       }
