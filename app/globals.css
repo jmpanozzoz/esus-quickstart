@@ -15,84 +15,24 @@ body {
   font-feature-settings: "cv02", "cv11", "ss03";
 }
 
-/* Focus rings — brand-tinted, consistent across inputs/buttons/links.
- * Default browser focus is too saturated for this palette. */
-*:focus-visible {
+/* Focus rings — brand-tinted, consistent across non-form elements (links,
+ * buttons, summary). Form controls draw their own ring via classes inside
+ * `_components/Field.tsx`, so this rule deliberately doesn't target them. */
+*:focus-visible:not(input):not(select):not(textarea):not(button) {
   outline: 2px solid theme("colors.brand.500");
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-/* ─── Form controls ─────────────────────────────────────────────────
- * Make `<input>`, `<select>`, `<textarea>` look identical out of the
- * box so dev pages don't have to remember Tailwind classes for them.
- * Same border, same focus ring, same height (single-line controls).
- * Date/time/select pickers natively render shorter than `<input
- * type="text">` — `min-height` plus `line-height` pins them all to
- * 38px so they line up in `grid-cols-2`. */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="search"],
-input[type="number"],
-input[type="date"],
-input[type="time"],
-input[type="datetime-local"],
-input[type="tel"],
-input[type="url"],
-textarea,
-select {
-  display: block;
-  width: 100%;
-  border: 1px solid theme("colors.neutral.200");
-  border-radius: 0.5rem;
-  background: white;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  color: theme("colors.neutral.900");
-  padding: 0.5rem 0.75rem;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
+/* ─── Native form chrome that classes can't reach ────────────────────────
+ * Tailwind utility classes can't style the native pickers / file-button /
+ * autofill background, so the few selectors below stay here. Everything
+ * else about input/select/textarea visual design lives in
+ * `app/(app)/_components/Field.tsx`.
+ */
 
-/* Single-line controls — pin to 38px so date/time/select match the
- * `<input type="text">` height. Textarea is excluded so it can grow. */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="search"],
-input[type="number"],
-input[type="date"],
-input[type="time"],
-input[type="datetime-local"],
-input[type="tel"],
-input[type="url"],
-select {
-  min-height: 38px;
-}
-
-/* Placeholder — slightly muted so it reads as hint, not as content. */
-input::placeholder,
-textarea::placeholder {
-  color: theme("colors.neutral.400");
-}
-
-/* Selects: kill the native dropdown chrome and draw our own chevron
- * so the control feels like the other inputs. The inline SVG is the
- * lucide `chevron-down` path with `currentColor` replaced by a
- * neutral-500 hex. */
-select {
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.6rem center;
-  background-size: 1rem;
-  padding-right: 2.25rem;
-}
-
-/* Date/time pickers — the native indicator is a tiny gray arrow that
- * clashes with the chevron we draw on `<select>`. Hide it so the
- * field is just a clean rectangle that opens the picker on focus. */
+/* Date/time pickers — keep the native indicator visible but soften it so
+ * it doesn't fight our own focus ring. */
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator {
@@ -100,39 +40,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 
-/* Focus state — brand outline ring. */
-input:focus,
-textarea:focus,
-select:focus {
-  border-color: theme("colors.brand.500");
-  box-shadow: 0 0 0 3px theme("colors.brand.100");
-  outline: none;
-}
-
-/* Disabled state — neutral wash, not-allowed cursor. */
-input:disabled,
-textarea:disabled,
-select:disabled {
-  background: theme("colors.neutral.50");
-  color: theme("colors.neutral.500");
-  cursor: not-allowed;
-}
-
-/* Checkboxes + radios — replace the native gray box with a brand
- * accent. Tailwind's `text-brand-600` would also work via `accent-*`
- * utilities, but defaulting here means forms don't have to remember. */
-input[type="checkbox"],
-input[type="radio"] {
-  accent-color: theme("colors.brand.600");
-}
-
-/* File inputs: native button looks alien against the brand palette.
- * Quickstart doesn't use file inputs yet, but if a fork adds one this
- * keeps it consistent. */
-input[type="file"] {
-  font-size: 0.875rem;
-  color: theme("colors.neutral.700");
-}
+/* File inputs: native button looks alien against the brand palette. */
 input[type="file"]::file-selector-button {
   margin-right: 0.75rem;
   border: 0;
@@ -146,4 +54,19 @@ input[type="file"]::file-selector-button {
 }
 input[type="file"]::file-selector-button:hover {
   background: theme("colors.brand.700");
+}
+
+/* Chrome's autofill highlight clashes with the brand palette: it draws a
+ * solid yellow box that ignores our `bg-white`. Pin it back to white with
+ * a long inset shadow (this is the documented workaround — `background-
+ * color: white !important` doesn't actually take). */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px white inset;
+  box-shadow: 0 0 0px 1000px white inset;
+  -webkit-text-fill-color: theme("colors.neutral.900");
+  transition: background-color 5000s ease-in-out 0s;
 }

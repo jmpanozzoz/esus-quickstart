@@ -13,7 +13,7 @@ import {
   Select,
   Textarea,
   TextInput,
-} from "../../../../_components/Field";
+} from "@/app/_components/Field";
 import type { MedicationRequestStatus } from "@/lib/fhir-clinical";
 
 const COMMON_DOSAGES = [
