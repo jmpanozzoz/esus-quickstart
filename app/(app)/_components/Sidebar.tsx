@@ -32,7 +32,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { EsusMark } from "../../_components/EsusMark";
-import { useAuth } from "@/lib/store";
+import { useAuth, isStaffUser } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -238,7 +238,7 @@ function SidebarBody({
           </p>
         )}
         <ul className="space-y-0.5">
-          {[...NAV, ...(user?.practitionerId ? [MY_PRACTICE_ENTRY] : [])].map((item) => {
+          {[...NAV, ...(isStaffUser(user) ? [MY_PRACTICE_ENTRY] : [])].map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
             return (
