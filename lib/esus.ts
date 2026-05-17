@@ -101,6 +101,15 @@ export function refresh(refreshToken: string): Promise<TokenResponse> {
   });
 }
 
+export interface AppRole {
+  name: string;
+  /** When true, this role bypasses patient scoping — set by the tenant
+   *  when creating the role. The BaaS never hardcodes which role names
+   *  are staff; it's entirely tenant-defined. */
+  isStaff?: boolean;
+  permissions: { resource: string; action: string }[];
+}
+
 export interface MeResponse {
   id: string;
   email: string;
@@ -110,6 +119,7 @@ export interface MeResponse {
   mfaEnabled: boolean;
   patientId: string | null;
   practitionerId: string | null;
+  roles: AppRole[];
 }
 
 export function me(accessToken: string): Promise<MeResponse> {

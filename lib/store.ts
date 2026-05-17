@@ -27,6 +27,23 @@ interface AuthState {
 
 export const useAuth = create<AuthState>((set) => ({
   user: null,
-  hydrate: (user) => set({ user }),
+  hydrate: (user) => set({ user: { ...user, roles: user.roles ?? [] } }),
   reset: () => set({ user: null }),
 }));
+
+/** Returns true if the user has the given role name. */
+export function hasRole(user: MeResponse | null, roleName: string): boolean {
+  return user?.roles?.some((r) => r.name === roleName) ?? false;
+}
+
+/**
+ * Returns true if the user is a staff member.
+ * Uses the isStaff flag set by the tenant on each role — no role names
+ * are hardcoded. A user is staff if they have a practitionerId OR any
+ * role the tenant explicitly marked as isStaff: true.
+ */
+export function isStaffUser(user: MeResponse | null): boolean {
+  if (!user) return false;
+  if (user.practitionerId) return true;
+  return user.roles?.some((r) => r.isStaff === true) ?? false;
+}
