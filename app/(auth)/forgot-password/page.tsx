@@ -21,9 +21,10 @@ function ForgotPasswordForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        setError(body?.error ?? `Request failed (${res.status})`);
+      // Always show the generic success message regardless of whether the
+      // email exists — anti-enumeration: don't reveal which emails are registered.
+      if (res.status >= 500) {
+        setError("Something went wrong. Please try again.");
         return;
       }
       setSent(true);
@@ -50,10 +51,9 @@ function ForgotPasswordForm() {
 
       {sent ? (
         <div className="mt-8 rounded-xl border border-teal-200 bg-teal-50 px-4 py-4 space-y-3">
-          <p className="text-sm font-medium text-teal-800">Check your email for a reset code</p>
+          <p className="text-sm font-medium text-teal-800">Check your inbox</p>
           <p className="text-xs text-teal-700">
-            We sent a 6-digit code to{" "}
-            <span className="font-medium">{email}</span>. It expires in 15 minutes.
+            If that email exists, you&apos;ll receive a 6-digit reset code. It expires in 15 minutes.
           </p>
           <p className="text-xs text-teal-700">
             Running locally? Mailpit captures every email at{" "}

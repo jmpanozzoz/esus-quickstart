@@ -7,6 +7,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Field, FormError, TextInput } from "@/app/_components/Field";
 
 const RESEND_COOLDOWN = 60; // seconds
+const SESSION_EMAIL_KEY = "esus_verify_email";
 
 function VerifyForm() {
   const router = useRouter();
@@ -15,7 +16,30 @@ function VerifyForm() {
   const appUserId = params.get("appUserId") ?? "";
   const firstName = params.get("firstName") ?? "";
   const lastName = params.get("lastName") ?? "";
-  const [email, setEmail] = useState(initialEmail);
+
+  // Resolve email: URL param takes precedence; fall back to sessionStorage
+  // so direct navigation to /verify still works.
+  const resolvedEmail = (() => {
+    if (initialEmail) return initialEmail;
+    try {
+      return sessionStorage.getItem(SESSION_EMAIL_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  })();
+
+  const [email, setEmail] = useState(resolvedEmail);
+
+  // Persist email to sessionStorage whenever it comes from URL params.
+  useEffect(() => {
+    if (initialEmail) {
+      try {
+        sessionStorage.setItem(SESSION_EMAIL_KEY, initialEmail);
+      } catch {
+        // ignore (private mode, storage full, etc.)
+      }
+    }
+  }, [initialEmail]);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -108,8 +132,8 @@ function VerifyForm() {
         <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Confirm your email</h1>
         <p className="text-sm text-neutral-600">
           Paste the 6-digit code we just sent to{" "}
-          {initialEmail ? (
-            <span className="font-medium text-neutral-800">{initialEmail}</span>
+          {email ? (
+            <span className="font-medium text-neutral-800">{email}</span>
           ) : (
             "your inbox"
           )}
@@ -148,7 +172,7 @@ function VerifyForm() {
             pattern="[0-9]{6}"
             maxLength={6}
             required
-            autoFocus={!!initialEmail}
+            autoFocus={!!resolvedEmail}
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
             className="text-center text-lg font-mono tracking-[0.4em]"

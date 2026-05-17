@@ -48,7 +48,12 @@ function ResetPasswordForm() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        setError(body?.error ?? `Reset failed (${res.status})`);
+        const errMsg: string = body?.error ?? `Reset failed (${res.status})`;
+        const isExpired =
+          res.status === 410 ||
+          res.status === 400 ||
+          errMsg.toLowerCase().includes("expired");
+        setError(isExpired ? "__expired__" : errMsg);
         return;
       }
       router.push(`/login?email=${encodeURIComponent(email)}&reset=1`);
@@ -121,7 +126,15 @@ function ResetPasswordForm() {
           />
         </Field>
 
-        {error && <FormError>{error}</FormError>}
+        {error && error !== "__expired__" && <FormError>{error}</FormError>}
+        {error === "__expired__" && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+            Your reset code has expired.{" "}
+            <Link href="/forgot-password" className="font-medium text-brand-700 hover:text-brand-800 underline-offset-2 hover:underline">
+              Request a new one
+            </Link>
+          </div>
+        )}
 
         <button
           type="submit"
