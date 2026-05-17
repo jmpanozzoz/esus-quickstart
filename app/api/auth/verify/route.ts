@@ -1,7 +1,13 @@
 import { isApiError } from "@/lib/api-errors";
 import { linkUserToPatient, verifyEmail } from "@/lib/esus";
-import { type FhirResource, fhirCreate, fhirUpdate } from "@/lib/fhir";
+import { fhirCreate, fhirUpdate } from "@/lib/fhir";
 import { NextResponse } from "next/server";
+
+interface FhirPatient {
+  resourceType: string;
+  id?: string;
+  name?: { use?: string; given?: string[]; family?: string }[];
+}
 
 export const runtime = "edge";
 
@@ -24,7 +30,7 @@ export async function POST(req: Request) {
     // patient scoping from the very first authenticated request.
     if (body.appUserId) {
       try {
-        const patient = await fhirCreate<FhirResource>("Patient", {
+        const patient = await fhirCreate<FhirPatient>("Patient", {
           resourceType: "Patient",
         });
         if (patient.id) {
@@ -34,7 +40,7 @@ export async function POST(req: Request) {
           // name instead of "Unknown".
           if (body.firstName || body.lastName) {
             try {
-              await fhirUpdate<FhirResource>("Patient", patient.id, {
+              await fhirUpdate<FhirPatient>("Patient", patient.id, {
                 resourceType: "Patient",
                 id: patient.id,
                 name: [
