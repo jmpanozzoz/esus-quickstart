@@ -15,17 +15,6 @@ const APP_ID = process.env.ESUS_APP_ID;
 const CLIENT_ID = process.env.ESUS_API_KEY_CLIENT_ID;
 const KEY_SECRET = process.env.ESUS_API_KEY_SECRET;
 
-if (!API || !APP_ID) {
-  // Throw at import time so a missing env var surfaces immediately —
-  // a confusing auth failure at request time is harder to diagnose.
-  // In production builds the check still fires; the error message names
-  // exactly which variable is missing.
-  throw new Error(
-    `[esus] Missing required env: ${!API ? "ESUS_API_URL" : "ESUS_APP_ID"}. ` +
-      "Copy .env.example to .env.local and fill in the values.",
-  );
-}
-
 import { ApiError, fromResponse, networkError } from "./api-errors";
 
 /**
@@ -36,9 +25,18 @@ export type EsusError = ApiError;
 export { ApiError };
 
 async function call<T>(path: string, init: RequestInit & { auth?: string } = {}): Promise<T> {
+  // Validate at call time (not import time) so the Next.js build phase
+  // can collect page data without crashing when env vars aren't present.
+  // The first real request will surface a clear error if vars are missing.
+  if (!API || !APP_ID) {
+    throw new Error(
+      `[esus] Missing required env: ${!API ? "ESUS_API_URL" : "ESUS_APP_ID"}. ` +
+        "Copy .env.example to .env.local and fill in the values.",
+    );
+  }
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "X-App-Id": APP_ID ?? "",
+    "X-App-Id": APP_ID,
     ...(init.headers as Record<string, string> | undefined),
   };
   if (init.auth) headers["Authorization"] = `Bearer ${init.auth}`;
