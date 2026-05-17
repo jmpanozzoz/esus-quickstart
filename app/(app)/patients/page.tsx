@@ -33,6 +33,11 @@ export default function PatientsPage() {
   const q = searchParams.get("q") ?? undefined;
   const params: Record<string, string | number> = { _count: 50, _sort: "-_lastUpdated" };
   if (q) params.name = q;
+  // Staff flow: the server-side proxy (/api/fhir/[...path]/route.ts) checks
+  // isStaffUser() on the session. Staff users do NOT receive X-App-User-Id, so
+  // the FHIR API returns the full patient list without patient-scope restriction.
+  // Non-staff users get their own patient record scoped via _id automatically.
+  // No client-side changes needed — the proxy handles scoping transparently.
   const { data: bundle, isLoading, error } = useFhirSearch<Patient>("Patient", params);
   const rows = bundle ? entries(bundle) : [];
 

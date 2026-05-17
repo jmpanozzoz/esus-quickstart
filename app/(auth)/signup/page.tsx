@@ -18,6 +18,8 @@ function SignupForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -68,11 +70,19 @@ function SignupForm() {
         body: JSON.stringify({
           email,
           password,
+          ...(firstName.trim() ? { firstName: firstName.trim() } : {}),
+          ...(lastName.trim() ? { lastName: lastName.trim() } : {}),
           ...(inviteToken && inviteValid ? { inviteToken } : {}),
         }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
+        if (res.status === 409) {
+          // Org-level identity: same email = same person. Redirect to login.
+          const loginUrl = `/login?email=${encodeURIComponent(email)}`;
+          window.location.href = loginUrl;
+          return;
+        }
         setError(body?.error ?? `Sign-up failed (${res.status})`);
         return;
       }
@@ -88,7 +98,11 @@ function SignupForm() {
       }
 
       // Normal signup: collect the 6-digit OTP on /verify.
-      const verifyUrl = `/verify?email=${encodeURIComponent(email)}${appUserId ? `&appUserId=${encodeURIComponent(appUserId)}` : ""}`;
+      const verifyUrl =
+        `/verify?email=${encodeURIComponent(email)}` +
+        (appUserId ? `&appUserId=${encodeURIComponent(appUserId)}` : "") +
+        (firstName.trim() ? `&firstName=${encodeURIComponent(firstName.trim())}` : "") +
+        (lastName.trim() ? `&lastName=${encodeURIComponent(lastName.trim())}` : "");
       router.push(verifyUrl);
     } finally {
       setLoading(false);
@@ -135,7 +149,7 @@ function SignupForm() {
           </div>
           <p className="text-xs text-teal-700 pl-6">
             {inviteInfo.patientId
-              ? "Your health records are ready to view once you sign in."
+              ? "Your health record will be accessible to you and your care team once you sign in."
               : "Complete your registration to access the portal."}
           </p>
           <div className="flex items-center gap-2 pl-6 pt-1">
@@ -175,6 +189,29 @@ function SignupForm() {
             )}
           </div>
         </Field>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="First name">
+            <TextInput
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="Jane"
+              autoComplete="given-name"
+              disabled={isInviteLoading}
+            />
+          </Field>
+          <Field label="Last name">
+            <TextInput
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="Smith"
+              autoComplete="family-name"
+              disabled={isInviteLoading}
+            />
+          </Field>
+        </div>
 
         <Field
           label="Password"

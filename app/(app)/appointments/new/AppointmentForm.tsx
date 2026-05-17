@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { invalidateResource } from "@/lib/use-fhir";
+import { useAuth } from "@/lib/store";
 import {
   Field,
   FormError,
@@ -40,12 +41,12 @@ interface FormState {
   description: string;
 }
 
-function defaultState(): FormState {
+function defaultState(practitionerId = ""): FormState {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   return {
     patientId: "",
-    practitionerId: "",
+    practitionerId,
     date: tomorrow.toISOString().slice(0, 10),
     time: "10:00",
     durationMin: 30,
@@ -62,7 +63,9 @@ export function AppointmentForm({
   practitioners: Option[];
 }) {
   const router = useRouter();
-  const [form, setForm] = useState<FormState>(defaultState);
+  const user = useAuth((s) => s.user);
+  // Pre-select the logged-in practitioner if their account is linked to one.
+  const [form, setForm] = useState<FormState>(() => defaultState(user?.practitionerId ?? ""));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 

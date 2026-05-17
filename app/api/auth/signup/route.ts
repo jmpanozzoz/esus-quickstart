@@ -21,7 +21,7 @@ import { NextResponse } from "next/server";
 export const runtime = "edge";
 
 export async function POST(req: Request) {
-  let body: { email?: string; password?: string; inviteToken?: string };
+  let body: { email?: string; password?: string; firstName?: string; lastName?: string; inviteToken?: string };
   try {
     body = await req.json();
   } catch {
@@ -35,6 +35,8 @@ export async function POST(req: Request) {
     const result = await signup({
       email: body.email,
       password: body.password,
+      ...(body.firstName ? { firstName: body.firstName } : {}),
+      ...(body.lastName ? { lastName: body.lastName } : {}),
       ...(body.inviteToken ? { inviteToken: body.inviteToken } : {}),
     });
     return NextResponse.json(result, { status: 201 });
