@@ -21,7 +21,7 @@ import { NextResponse } from "next/server";
 export const runtime = "edge";
 
 export async function POST(req: Request) {
-  let body: { email?: string; password?: string };
+  let body: { email?: string; password?: string; inviteToken?: string };
   try {
     body = await req.json();
   } catch {
@@ -32,7 +32,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    const result = await signup({ email: body.email, password: body.password });
+    const result = await signup({
+      email: body.email,
+      password: body.password,
+      ...(body.inviteToken ? { inviteToken: body.inviteToken } : {}),
+    });
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     // `ApiError` carries the parsed FHIR diagnostic + a friendly
