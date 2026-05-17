@@ -16,9 +16,14 @@ const CLIENT_ID = process.env.ESUS_API_KEY_CLIENT_ID;
 const KEY_SECRET = process.env.ESUS_API_KEY_SECRET;
 
 if (!API || !APP_ID) {
-  // We deliberately throw at import time in dev so a missing env var
-  // surfaces on the first request, not after a confusing auth failure.
-  console.warn("[esus] ESUS_API_URL or ESUS_APP_ID is missing — copy .env.example to .env.local");
+  // Throw at import time so a missing env var surfaces immediately —
+  // a confusing auth failure at request time is harder to diagnose.
+  // In production builds the check still fires; the error message names
+  // exactly which variable is missing.
+  throw new Error(
+    `[esus] Missing required env: ${!API ? "ESUS_API_URL" : "ESUS_APP_ID"}. ` +
+      "Copy .env.example to .env.local and fill in the values.",
+  );
 }
 
 import { ApiError, fromResponse, networkError } from "./api-errors";
