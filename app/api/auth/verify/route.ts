@@ -1,11 +1,12 @@
 import { isApiError } from "@/lib/api-errors";
-import { verifyEmail } from "@/lib/esus";
+import { linkUserToPatient, verifyEmail } from "@/lib/esus";
+import { type FhirResource, fhirCreate } from "@/lib/fhir";
 import { NextResponse } from "next/server";
 
 export const runtime = "edge";
 
 export async function POST(req: Request) {
-  let body: { email?: string; code?: string };
+  let body: { email?: string; code?: string; appUserId?: string };
   try {
     body = await req.json();
   } catch {
@@ -17,6 +18,27 @@ export async function POST(req: Request) {
 
   try {
     await verifyEmail(body.email, body.code);
+
+    // Auto-link: if appUserId was provided at signup, create a FHIR Patient
+    // and link the app user to it. This ensures the FHIR proxy enforces
+    // patient scoping from the very first authenticated request.
+    if (body.appUserId) {
+      try {
+        const patient = await fhirCreate<FhirResource>("Patient", {
+          resourceType: "Patient",
+        });
+        if (patient.id) {
+          await linkUserToPatient(body.appUserId, patient.id);
+          return NextResponse.json({ success: true, patientId: patient.id });
+        }
+      } catch (linkErr) {
+        // Non-fatal: log and continue. The user is verified; they'll just
+        // remain unlinked until a background job or manual admin action
+        // resolves it. Don't fail the verification flow over a linking error.
+        console.error("[verify] Patient auto-link failed:", linkErr);
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (err) {
     if (isApiError(err)) {

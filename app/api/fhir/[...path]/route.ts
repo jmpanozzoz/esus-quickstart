@@ -27,20 +27,34 @@ function errResponse(err: unknown) {
     // Forward the FHIR `OperationOutcome` verbatim when present so the
     // SWR client-side fetcher can parse the same `diagnostics` /
     // `expression` fields it normally would. Status mirrors the upstream.
-    return NextResponse.json(
-      err.outcome ?? { resourceType: "OperationOutcome", issue: [{ severity: "error", diagnostics: err.userMessage }] },
-      { status: err.status || 500 },
-    );
+    //
+    // For 403s, also surface `diagnostic` at the top level so developers
+    // inspecting the raw response body immediately see the patient-scope
+    // reason (e.g. "Patient-scoped token: access restricted to the linked
+    // patient") instead of having to drill into issue[0].diagnostics.
+    const body =
+      err.outcome ?? { resourceType: "OperationOutcome", issue: [{ severity: "error", diagnostics: err.userMessage }] };
+    const extra = err.status === 403 && err.diagnostic ? { diagnostic: err.diagnostic } : {};
+    return NextResponse.json({ ...body, ...extra }, { status: err.status || 500 });
   }
   return NextResponse.json({ error: "fhir request failed" }, { status: 500 });
 }
 
 export async function GET(req: Request, ctx: Ctx) {
-  await requireSession();
+  const session = await requireSession();
   const { path } = await ctx.params;
   const [resourceType, id] = path;
+  const opts = session.user.patientId ? { appUserId: session.user.id } : undefined;
   try {
-    const data = id ? await fhirRead(resourceType, id) : await fhirSearch(resourceType, asObj(req));
+    let params = asObj(req);
+    // For Patient searches without an explicit _id filter, scope to the session
+    // user's own patient so the API's patient-scope guard doesn't 403 the request.
+    if (resourceType === "Patient" && !id && opts && !params._id && !params.id) {
+      params = { ...params, _id: session.user.patientId! };
+    }
+    const data = id
+      ? await fhirRead(resourceType, id, opts)
+      : await fhirSearch(resourceType, params, opts);
     return NextResponse.json(data);
   } catch (err) {
     return errResponse(err);
