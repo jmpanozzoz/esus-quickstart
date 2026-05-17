@@ -1,5 +1,5 @@
 /**
- * Server-side proxy for GET /v1/auth/patient-invite/:token
+ * Server-side proxy for GET /v1/auth/user-invite/:token
  *
  * This is a public endpoint — no auth cookie required. It lets the
  * signup page validate an invite token and retrieve the pre-linked
@@ -25,7 +25,7 @@ export async function GET(
 
   let res: Response;
   try {
-    res = await fetch(`${apiUrl}/v1/auth/patient-invite/${encodeURIComponent(token)}`, {
+    res = await fetch(`${apiUrl}/v1/auth/user-invite/${encodeURIComponent(token)}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

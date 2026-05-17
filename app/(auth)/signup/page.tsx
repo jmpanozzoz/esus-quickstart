@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertCircle, ArrowRight, Lock, MailCheck, UserCheck } from "lucide-react";
+import { Field, FormError, TextInput } from "@/app/_components/Field";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -38,7 +39,7 @@ function SignupForm() {
     const urlEmail = params.get("email");
     if (urlEmail) setEmail(urlEmail);
 
-    fetch(`/api/auth/patient-invite/${encodeURIComponent(token)}`)
+    fetch(`/api/auth/user-invite/${encodeURIComponent(token)}`)
       .then(async (res) => {
         if (!res.ok) {
           setInviteValid(false);
@@ -147,10 +148,13 @@ function SignupForm() {
       )}
 
       <form onSubmit={onSubmit} className="mt-8 space-y-4">
-        <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-neutral-700">Email</span>
+        <Field
+          label="Email"
+          required
+          hint={inviteValid === true ? "Provided by your care team — cannot be changed." : undefined}
+        >
           <div className="relative">
-            <input
+            <TextInput
               type="email"
               required
               autoFocus={!inviteValid}
@@ -160,6 +164,7 @@ function SignupForm() {
               autoComplete="email"
               readOnly={inviteValid === true}
               disabled={inviteValid === true || isInviteLoading}
+              intent={inviteValid === true ? "default" : "default"}
               className={inviteValid === true ? "pr-8 text-neutral-500 bg-neutral-50 cursor-not-allowed" : ""}
             />
             {inviteValid === true && (
@@ -169,14 +174,14 @@ function SignupForm() {
               />
             )}
           </div>
-          {inviteValid === true && (
-            <p className="text-[11px] text-neutral-500">Provided by your care team — cannot be changed.</p>
-          )}
-        </label>
+        </Field>
 
-        <label className="block space-y-1.5">
-          <span className="text-xs font-medium text-neutral-700">Password</span>
-          <input
+        <Field
+          label="Password"
+          required
+          hint="12+ characters with upper, lower, number, and a special character. We also check against known-breached lists."
+        >
+          <TextInput
             type="password"
             required
             autoFocus={inviteValid === true}
@@ -185,17 +190,9 @@ function SignupForm() {
             autoComplete="new-password"
             disabled={isInviteLoading}
           />
-          <p className="text-[11px] leading-relaxed text-neutral-500">
-            12+ characters with upper, lower, number, and a special character. We also check against known-breached lists.
-          </p>
-        </label>
+        </Field>
 
-        {error && (
-          <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <p>{error}</p>
-          </div>
-        )}
+        {error && <FormError>{error}</FormError>}
 
         <button
           type="submit"

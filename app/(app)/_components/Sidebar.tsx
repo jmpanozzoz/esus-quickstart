@@ -32,7 +32,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { EsusMark } from "../../_components/EsusMark";
-import { useAuth } from "@/lib/store";
+import { useAuth, isStaffUser } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -42,6 +42,8 @@ const NAV = [
   { href: "/patients",      label: "Patients",      icon: Users },
   { href: "/practitioners", label: "Practitioners", icon: Stethoscope },
 ];
+
+const MY_PRACTICE_ENTRY = { href: "/my-practice", label: "My practice", icon: Stethoscope };
 
 const NARROW_BP = "(max-width: 1024px)";
 const MOBILE_BP = "(max-width: 767px)";
@@ -236,7 +238,7 @@ function SidebarBody({
           </p>
         )}
         <ul className="space-y-0.5">
-          {NAV.map((item) => {
+          {[...NAV, ...(isStaffUser(user) ? [MY_PRACTICE_ENTRY] : [])].map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
             return (

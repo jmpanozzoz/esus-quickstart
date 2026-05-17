@@ -120,5 +120,5 @@ export const config = {
   // Only run on authenticated surfaces. Auth pages (/, /signup, /login,
   // /verify) and the API routes don't need this middleware — they
   // either are the auth flow itself or run their own session check.
-  matcher: ["/dashboard/:path*", "/patients/:path*", "/practitioners/:path*", "/appointments/:path*", "/encounters/:path*"],
+  matcher: ["/dashboard/:path*", "/patients/:path*", "/practitioners/:path*", "/appointments/:path*", "/encounters/:path*", "/my-practice/:path*"],
 };
