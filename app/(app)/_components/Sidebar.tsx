@@ -23,6 +23,7 @@ import {
   ChevronsRight,
   ChevronsUpDown,
   LayoutDashboard,
+  type LucideIcon,
   LogOut,
   Settings,
   ShieldCheck,
@@ -37,13 +38,22 @@ import { EsusMark } from "../../_components/EsusMark";
 import { useAuth, isStaffUser } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  /** When true, this item is hidden for staff users (who have no patient consents). */
+  hideForStaff?: boolean;
+}
+
+const NAV: NavItem[] = [
   { href: "/dashboard",     label: "Dashboard",     icon: LayoutDashboard },
   { href: "/appointments",  label: "Appointments",  icon: CalendarDays },
   { href: "/encounters",    label: "Encounters",    icon: Activity },
   { href: "/patients",      label: "Patients",      icon: Users },
   { href: "/practitioners", label: "Practitioners", icon: Stethoscope },
-  { href: "/privacy",       label: "Privacy",       icon: ShieldCheck },
+  // Only show Privacy to non-staff users (patients have consents to manage)
+  { href: "/privacy",       label: "Privacy",       icon: ShieldCheck, hideForStaff: true },
   { href: "/settings",      label: "Settings",      icon: Settings },
 ];
 
@@ -242,7 +252,7 @@ function SidebarBody({
           </p>
         )}
         <ul className="space-y-0.5">
-          {[...NAV, ...(isStaffUser(user) ? [MY_PRACTICE_ENTRY] : [])].map((item) => {
+          {[...NAV.filter((item) => !(item.hideForStaff && isStaffUser(user))), ...(isStaffUser(user) ? [MY_PRACTICE_ENTRY] : [])].map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
             return (

@@ -1,10 +1,14 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Field, FormError, TextInput } from "@/app/_components/Field";
+
+const NOTICES: Record<string, string> = {
+  already_verified: "Your email is already verified. Please log in.",
+};
 
 function LoginForm() {
   const router = useRouter();
@@ -13,6 +17,7 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const notice = params.get("notice") ? NOTICES[params.get("notice")!] : null;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -80,6 +85,12 @@ function LoginForm() {
           </Link>
         </div>
 
+        {notice && (
+          <p className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+            {notice}
+          </p>
+        )}
         {error && <FormError>{error}</FormError>}
 
         <button

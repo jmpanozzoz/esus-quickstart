@@ -110,7 +110,17 @@ function VerifyForm() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        setError(body?.error ?? `Verification failed (${res.status})`);
+        const errMsg: string = (body?.error ?? `Verification failed (${res.status})`);
+        // Edge case: email already verified — redirect to login with a helpful message
+        if (
+          res.status === 409 ||
+          errMsg.toLowerCase().includes("already verified") ||
+          errMsg.toLowerCase().includes("already confirmed")
+        ) {
+          router.push(`/login?email=${encodeURIComponent(email)}&notice=already_verified`);
+          return;
+        }
+        setError(errMsg);
         return;
       }
       router.push(`/login?email=${encodeURIComponent(email)}`);

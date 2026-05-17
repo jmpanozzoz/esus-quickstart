@@ -5,6 +5,7 @@ export const runtime = "edge";
 import { ShieldCheck, ShieldOff, AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Card, EmptyState, PageHeader } from "@/app/_components/ui";
+import { useAuth, isStaffUser } from "@/lib/store";
 
 // ── FHIR Consent shape (minimal) ────────────────────────────────────
 
@@ -137,9 +138,30 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
   );
 }
 
-// ── Page ───────────────────────────────────────────────────────────
+// ── Staff guard ────────────────────────────────────────────────────
 
-export default function PrivacyPage() {
+function StaffNotice() {
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Privacy & Consent"
+        description="Consent management for staff accounts."
+      />
+      <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-4 text-sm text-blue-800">
+        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" aria-hidden="true" />
+        <p>
+          <strong>Staff accounts:</strong> Consent management is for patient accounts.
+          Staff access is governed by treatment consents on a per-patient basis,
+          managed through each patient&apos;s record.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Patient consent view ───────────────────────────────────────────
+
+function PatientPrivacyPage() {
   const [bundle, setBundle] = useState<FhirBundle | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -299,4 +321,12 @@ function ConsentSkeleton() {
       ))}
     </ul>
   );
+}
+
+// ── Page ───────────────────────────────────────────────────────────
+
+export default function PrivacyPage() {
+  const user = useAuth((s) => s.user);
+  if (isStaffUser(user)) return <StaffNotice />;
+  return <PatientPrivacyPage />;
 }

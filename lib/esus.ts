@@ -186,6 +186,19 @@ export async function resendVerification(email: string): Promise<void> {
   });
 }
 
+/**
+ * Request permanent deletion of the authenticated user's account.
+ * Calls DELETE /v1/auth/me/account — the server will schedule deletion
+ * and invalidate all sessions. If the endpoint is not yet available,
+ * this throws and the caller should fall back to the support mailto.
+ */
+export async function deleteAccount(accessToken: string): Promise<void> {
+  return call<void>("/v1/auth/me/account", {
+    method: "DELETE",
+    auth: accessToken,
+  });
+}
+
 export async function linkUserToPatient(
   appUserId: string,
   patientId: string,

@@ -2,10 +2,11 @@
 
 export const runtime = "edge";
 
-import { CheckCircle2, Lock, User } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Download, Lock, Trash2, User } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Field, FormError, TextInput } from "@/app/_components/Field";
-import { Card, PageHeader } from "@/app/_components/ui";
+import { Button, Card, PageHeader } from "@/app/_components/ui";
 import { useAuth } from "@/lib/store";
 
 // Password must be 12+ chars, upper + lower + number + special
@@ -265,6 +266,182 @@ function ChangePasswordSection() {
   );
 }
 
+// ── Delete account confirmation dialog ────────────────────────────────────
+
+function DeleteAccountDialog({
+  onConfirm,
+  onCancel,
+  isDeleting,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+  isDeleting: boolean;
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape" && !isDeleting) onCancel(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onCancel, isDeleting]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      aria-modal="true"
+      role="dialog"
+      aria-labelledby="delete-account-dialog-title"
+    >
+      <div className="w-full max-w-md rounded-xl border border-neutral-200 bg-white shadow-xl">
+        <div className="flex items-start gap-3 p-6">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+            <Trash2 className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <h2 id="delete-account-dialog-title" className="text-base font-semibold text-neutral-900">
+              Delete your account?
+            </h2>
+            <p className="mt-1 text-sm text-neutral-600">
+              This action is permanent and cannot be undone. All your personal data,
+              session tokens, and linked records will be permanently deleted.
+            </p>
+            <p className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+              <strong>Warning:</strong> Once deleted, your account cannot be recovered.
+              Make sure to export your health records before proceeding.
+            </p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-neutral-100 px-6 py-4">
+          <Button variant="secondary" size="sm" onClick={onCancel} disabled={isDeleting}>
+            Cancel
+          </Button>
+          <Button variant="danger" size="sm" onClick={onConfirm} disabled={isDeleting}>
+            {isDeleting ? "Deleting…" : "Yes, delete my account"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Danger zone section ────────────────────────────────────────────────────
+
+function DangerZoneSection() {
+  const router = useRouter();
+  const reset = useAuth((s) => s.reset);
+  const [showDialog, setShowDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function handleDelete() {
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch("/api/auth/me/account", { method: "DELETE" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        // If endpoint not implemented yet, show support fallback
+        if (res.status === 404 || res.status === 405) {
+          setShowDialog(false);
+          setDeleteError("Account self-deletion is not yet available. Please contact support.");
+          return;
+        }
+        setDeleteError(body?.error ?? `Deletion failed (${res.status})`);
+        setShowDialog(false);
+        return;
+      }
+      // Clear session and redirect
+      reset();
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.replace("/login");
+    } catch {
+      setDeleteError("Network error. Please try again.");
+      setShowDialog(false);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="rounded-xl border border-rose-200 bg-white overflow-hidden">
+        <div className="flex items-center gap-2.5 border-b border-rose-200 bg-rose-50 px-5 py-3">
+          <AlertTriangle className="h-4 w-4 text-rose-600" aria-hidden="true" />
+          <h2 className="text-sm font-semibold text-rose-800">Danger Zone</h2>
+        </div>
+
+        <div className="divide-y divide-neutral-100 px-5">
+          {/* Data export */}
+          <div className="flex flex-col gap-1.5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-neutral-900">Export my data</p>
+              <p className="mt-0.5 text-xs text-neutral-500">
+                Download your health records from the{" "}
+                <a href="/encounters" className="font-medium text-brand-700 hover:text-brand-800 underline">
+                  Health Records
+                </a>{" "}
+                section, or{" "}
+                <a
+                  href="mailto:support@esus.health?subject=Data%20export%20request"
+                  className="font-medium text-brand-700 hover:text-brand-800 underline"
+                >
+                  contact support
+                </a>{" "}
+                for a full GDPR data export.
+              </p>
+            </div>
+            <a
+              href="/encounters"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50 hover:border-neutral-300"
+            >
+              <Download className="h-3.5 w-3.5" aria-hidden="true" />
+              Go to records
+            </a>
+          </div>
+
+          {/* Account deletion */}
+          <div className="flex flex-col gap-1.5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-neutral-900">Delete my account</p>
+              <p className="mt-0.5 text-xs text-neutral-500">
+                Permanently delete your account and all associated data. This cannot be undone.
+              </p>
+              {deleteError && (
+                <p className="mt-1.5 text-xs text-rose-700">
+                  {deleteError}{" "}
+                  {deleteError.includes("contact support") && (
+                    <a
+                      href="mailto:support@esus.health?subject=Account%20deletion%20request"
+                      className="font-medium underline hover:no-underline"
+                    >
+                      support@esus.health
+                    </a>
+                  )}
+                </p>
+              )}
+            </div>
+            <Button
+              variant="danger"
+              size="sm"
+              className="shrink-0"
+              onClick={() => { setDeleteError(null); setShowDialog(true); }}
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+              Delete account
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {showDialog && (
+        <DeleteAccountDialog
+          onConfirm={handleDelete}
+          onCancel={() => setShowDialog(false)}
+          isDeleting={isDeleting}
+        />
+      )}
+    </>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -278,6 +455,7 @@ export default function SettingsPage() {
         <AccountInfoSection />
         <ProfileSection />
         <ChangePasswordSection />
+        <DangerZoneSection />
       </div>
     </div>
   );
