@@ -1,6 +1,6 @@
 import { isApiError } from "@/lib/api-errors";
 import { linkUserToPatient, verifyEmail } from "@/lib/esus";
-import { fhirCreate } from "@/lib/fhir";
+import { type FhirResource, fhirCreate } from "@/lib/fhir";
 import { NextResponse } from "next/server";
 
 export const runtime = "edge";
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     // patient scoping from the very first authenticated request.
     if (body.appUserId) {
       try {
-        const patient = await fhirCreate("Patient", {
+        const patient = await fhirCreate<FhirResource>("Patient", {
           resourceType: "Patient",
           active: true,
         });
