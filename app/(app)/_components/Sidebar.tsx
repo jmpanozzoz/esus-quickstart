@@ -43,6 +43,8 @@ const NAV = [
   { href: "/practitioners", label: "Practitioners", icon: Stethoscope },
 ];
 
+const MY_PRACTICE_ENTRY = { href: "/my-practice", label: "My practice", icon: Stethoscope };
+
 const NARROW_BP = "(max-width: 1024px)";
 const MOBILE_BP = "(max-width: 767px)";
 const COLLAPSED_KEY = "esus-quickstart-sidebar-collapsed";
@@ -236,7 +238,7 @@ function SidebarBody({
           </p>
         )}
         <ul className="space-y-0.5">
-          {NAV.map((item) => {
+          {[...NAV, ...(user?.practitionerId ? [MY_PRACTICE_ENTRY] : [])].map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
             return (
