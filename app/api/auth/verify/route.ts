@@ -26,7 +26,6 @@ export async function POST(req: Request) {
       try {
         const patient = await fhirCreate<FhirResource>("Patient", {
           resourceType: "Patient",
-          active: true,
         });
         if (patient.id) {
           await linkUserToPatient(body.appUserId, patient.id);
