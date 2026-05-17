@@ -8,6 +8,7 @@
  */
 import { isApiError } from "@/lib/api-errors";
 import { requireSession } from "@/lib/auth";
+import { isStaffUser } from "@/lib/store";
 import { fhirCreate, fhirDelete, fhirPatch, fhirRead, fhirSearch, fhirUpdate } from "@/lib/fhir";
 import { NextResponse } from "next/server";
 
@@ -44,7 +45,11 @@ export async function GET(req: Request, ctx: Ctx) {
   const session = await requireSession();
   const { path } = await ctx.params;
   const [resourceType, id] = path;
-  const opts = session.user.patientId ? { appUserId: session.user.id } : undefined;
+  // Staff users (isStaff role or practitionerId) access multiple patients via
+  // clinical consent — do NOT send X-App-User-Id or they'd be scoped to their
+  // own patient record instead of the full org.
+  const isStaff = isStaffUser(session.user);
+  const opts = !isStaff && session.user.patientId ? { appUserId: session.user.id } : undefined;
   try {
     let params = asObj(req);
     // For Patient searches without an explicit _id filter, scope to the session

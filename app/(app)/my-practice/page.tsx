@@ -134,10 +134,12 @@ export default function MyPracticePage() {
     () => ({
       date: `ge${todayStart}`,
       "date:end": `le${todayEnd}`,
+      // Scope to this practitioner's appointments only
+      ...(practitionerId ? { practitioner: practitionerId } : {}),
       _count: 10,
       _sort: "date",
     }),
-    [todayStart, todayEnd],
+    [todayStart, todayEnd, practitionerId],
   );
 
   const {
