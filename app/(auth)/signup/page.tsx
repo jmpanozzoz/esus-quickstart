@@ -27,8 +27,12 @@ export default function SignupPage() {
         setError(body?.error ?? `Sign-up failed (${res.status})`);
         return;
       }
+      const result = await res.json().catch(() => null);
+      const appUserId: string | undefined = result?.appUserId;
       // Esus emails a 6-digit OTP — collect it on /verify.
-      router.push(`/verify?email=${encodeURIComponent(email)}`);
+      // Pass appUserId so the verify step can auto-link the user to a Patient.
+      const verifyUrl = `/verify?email=${encodeURIComponent(email)}${appUserId ? `&appUserId=${encodeURIComponent(appUserId)}` : ""}`;
+      router.push(verifyUrl);
     } finally {
       setLoading(false);
     }

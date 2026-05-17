@@ -12,6 +12,8 @@
 
 const API = process.env.ESUS_API_URL;
 const APP_ID = process.env.ESUS_APP_ID;
+const CLIENT_ID = process.env.ESUS_API_KEY_CLIENT_ID;
+const KEY_SECRET = process.env.ESUS_API_KEY_SECRET;
 
 if (!API || !APP_ID) {
   // We deliberately throw at import time in dev so a missing env var
@@ -121,4 +123,39 @@ export interface FhirBundle<T = unknown> {
 
 export function myObservations(accessToken: string): Promise<FhirBundle> {
   return call<FhirBundle>("/v1/auth/me/Observation", { auth: accessToken });
+}
+
+// ── Server-admin: patient linking ────────────────────────────────────────────
+
+/**
+ * Links an app user to a FHIR Patient resource. Must be called from a
+ * server-side route handler — uses the API key credentials from env vars,
+ * which must never be exposed to the browser.
+ */
+export async function linkUserToPatient(
+  appUserId: string,
+  patientId: string,
+): Promise<{ id: string; email: string; patientId: string }> {
+  if (!API || !APP_ID || !CLIENT_ID || !KEY_SECRET) {
+    throw new Error(
+      "[esus] Missing env: ESUS_API_URL / ESUS_APP_ID / ESUS_API_KEY_CLIENT_ID / ESUS_API_KEY_SECRET",
+    );
+  }
+  let res: Response;
+  try {
+    res = await fetch(`${API}/v1/auth/users/${appUserId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Api-Key": `${CLIENT_ID}:${KEY_SECRET}`,
+        "X-App-Id": APP_ID,
+      },
+      body: JSON.stringify({ patientId }),
+      cache: "no-store",
+    });
+  } catch (cause) {
+    throw networkError(cause);
+  }
+  if (!res.ok) throw await fromResponse(res);
+  return (await res.json()) as { id: string; email: string; patientId: string };
 }
