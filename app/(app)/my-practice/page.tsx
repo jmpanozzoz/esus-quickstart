@@ -25,7 +25,7 @@ import {
   type HumanName,
   type Identifier,
 } from "@/lib/fhir-helpers";
-import { useAuth } from "@/lib/store";
+import { useAuth, isStaffUser } from "@/lib/store";
 import { useFhirBatch, useFhirSearch } from "@/lib/use-fhir";
 
 interface Practitioner extends FhirResource {
@@ -80,9 +80,10 @@ export default function MyPracticePage() {
   const debouncedSearch = useDebounce(searchInput, 350);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Redirect non-practitioners once the store has hydrated.
+  // Redirect non-staff users without a practitionerId to the dashboard.
+  // Staff users without a practitionerId are handled below with a setup card.
   useEffect(() => {
-    if (user !== null && !user.practitionerId) {
+    if (user !== null && !user.practitionerId && !isStaffUser(user)) {
       router.replace("/dashboard");
     }
   }, [user, router]);
@@ -184,8 +185,22 @@ export default function MyPracticePage() {
     );
   }
 
-  // Shouldn't normally render — redirect fires above — but guards the rest.
-  if (!user.practitionerId) return null;
+  // Staff without practitioner: show a setup card instead of the full page.
+  if (!user.practitionerId) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-8 max-w-md">
+          <h2 className="text-lg font-semibold mb-2">Set up your practitioner profile</h2>
+          <p className="text-sm text-[var(--text-muted)] mb-4">
+            Your account has staff access but no practitioner profile yet. Ask your administrator to link your account to a Practitioner record.
+          </p>
+          <a href="/practitioners/new" className="inline-flex items-center gap-2 text-sm font-medium text-brand-600 hover:text-brand-700">
+            Create practitioner profile →
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   const displayName = formatName(practitioner?.name);
   const phone = findTelecom(practitioner?.telecom, "phone");

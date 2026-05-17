@@ -97,6 +97,18 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* First-login onboarding banner — shown when the user skipped name fields on signup */}
+      {!user?.firstName && (
+        <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 flex items-center justify-between mb-4">
+          <div>
+            <p className="text-sm font-medium text-teal-800">Complete your profile</p>
+            <p className="text-xs text-teal-600">Add your name to personalize your health record.</p>
+          </div>
+          <a href="/practitioners/new" className="text-xs font-medium text-teal-700 underline">
+            Update profile →
+          </a>
+        </div>
+      )}
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-brand-700">{greeting}</p>
