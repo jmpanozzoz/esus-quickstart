@@ -59,6 +59,7 @@ export interface SignupBody {
   password: string;
   firstName?: string;
   lastName?: string;
+  inviteToken?: string;
 }
 
 export interface SignupResult {
