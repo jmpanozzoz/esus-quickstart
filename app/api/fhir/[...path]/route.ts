@@ -41,11 +41,20 @@ function errResponse(err: unknown) {
 }
 
 export async function GET(req: Request, ctx: Ctx) {
-  await requireSession();
+  const session = await requireSession();
   const { path } = await ctx.params;
   const [resourceType, id] = path;
+  const opts = session.user.patientId ? { appUserId: session.user.id } : undefined;
   try {
-    const data = id ? await fhirRead(resourceType, id) : await fhirSearch(resourceType, asObj(req));
+    let params = asObj(req);
+    // For Patient searches without an explicit _id filter, scope to the session
+    // user's own patient so the API's patient-scope guard doesn't 403 the request.
+    if (resourceType === "Patient" && !id && opts && !params._id && !params.id) {
+      params = { ...params, _id: session.user.patientId! };
+    }
+    const data = id
+      ? await fhirRead(resourceType, id, opts)
+      : await fhirSearch(resourceType, params, opts);
     return NextResponse.json(data);
   } catch (err) {
     return errResponse(err);
