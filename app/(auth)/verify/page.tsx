@@ -11,6 +11,8 @@ function VerifyForm() {
   const params = useSearchParams();
   const initialEmail = params.get("email") ?? "";
   const appUserId = params.get("appUserId") ?? "";
+  const firstName = params.get("firstName") ?? "";
+  const lastName = params.get("lastName") ?? "";
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +26,13 @@ function VerifyForm() {
       const res = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code, appUserId: appUserId || undefined }),
+        body: JSON.stringify({
+          email,
+          code,
+          appUserId: appUserId || undefined,
+          firstName: firstName || undefined,
+          lastName: lastName || undefined,
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
