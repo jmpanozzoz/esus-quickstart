@@ -3,8 +3,10 @@
 import { ArrowRight, MailCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Field, FormError, TextInput } from "@/app/_components/Field";
+
+const RESEND_COOLDOWN = 60; // seconds
 
 function VerifyForm() {
   const router = useRouter();
@@ -17,6 +19,54 @@ function VerifyForm() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Resend state
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startCooldown = useCallback(() => {
+    setResendCooldown(RESEND_COOLDOWN);
+    cooldownRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          if (cooldownRef.current) clearInterval(cooldownRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, []);
+
+  async function onResend() {
+    if (resendCooldown > 0 || resendLoading) return;
+    setResendLoading(true);
+    setResendSuccess(false);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setError(body?.error ?? `Resend failed (${res.status})`);
+        return;
+      }
+      setResendSuccess(true);
+      startCooldown();
+    } finally {
+      setResendLoading(false);
+    }
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -118,7 +168,26 @@ function VerifyForm() {
         </button>
       </form>
 
-      <p className="mt-8 text-center text-xs text-neutral-500">
+      {/* Resend section */}
+      <div className="mt-6 flex flex-col items-center gap-2">
+        {resendSuccess && (
+          <p className="text-xs text-teal-700 font-medium">Code resent — check your inbox.</p>
+        )}
+        <button
+          type="button"
+          onClick={onResend}
+          disabled={resendCooldown > 0 || resendLoading || !email}
+          className="text-xs font-medium text-brand-700 hover:text-brand-800 disabled:cursor-not-allowed disabled:text-neutral-400"
+        >
+          {resendLoading
+            ? "Sending…"
+            : resendCooldown > 0
+              ? `Resend code (${resendCooldown}s)`
+              : "Resend code"}
+        </button>
+      </div>
+
+      <p className="mt-6 text-center text-xs text-neutral-500">
         Already verified?{" "}
         <Link href="/login" className="font-medium text-brand-700 hover:text-brand-800">
           Sign in

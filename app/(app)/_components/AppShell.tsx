@@ -16,8 +16,8 @@
  * for protected routes ships at the same speed as the unauthenticated
  * /login page.
  */
-import { Menu } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { AlertCircle, Menu, RefreshCw } from "lucide-react";
+import { useEffect, useState, useCallback, type ReactNode } from "react";
 import { fromResponse, networkError } from "@/lib/api-errors";
 import type { MeResponse } from "@/lib/esus";
 import { useAuth } from "@/lib/store";
@@ -39,9 +39,12 @@ async function fetchSession(): Promise<MeResponse | null> {
 export function AppShell({ children }: { children: ReactNode }) {
   const hydrate = useAuth((s) => s.hydrate);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
-  useEffect(() => {
+  const loadSession = useCallback(() => {
     let cancelled = false;
+    setSessionError(null);
     fetchSession()
       .then((user) => {
         if (cancelled) return;
@@ -57,15 +60,24 @@ export function AppShell({ children }: { children: ReactNode }) {
         }
         hydrate(user);
       })
-      .catch(() => {
-        // Network / 5xx — swallow. The user can retry by reloading.
-        // Sidebar will keep showing placeholders; pages that need
-        // user info should render gracefully against `user === null`.
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        // Network / 5xx — show an error banner so the user isn't stuck
+        // on a permanently empty shell with no feedback.
+        const message =
+          err instanceof Error ? err.message : "Could not load your session.";
+        setSessionError(message);
       });
     return () => {
       cancelled = true;
     };
   }, [hydrate]);
+
+  useEffect(() => {
+    return loadSession();
+    // retryKey changes when the user clicks "Retry", triggering a re-run
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadSession, retryKey]);
 
   // `h-screen overflow-hidden` pins the shell to the viewport; <main>
   // is the only scrollable region. Without this the sidebar grew
@@ -74,6 +86,32 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex h-screen overflow-hidden">
       <Sidebar mobileOpen={mobileNavOpen} setMobileOpen={setMobileNavOpen} />
       <div className="flex min-w-0 flex-1 flex-col">
+        {/* Session error banner — shown when /api/auth/me fails with a
+            network or server error. Lets the user retry or go to login. */}
+        {sessionError && (
+          <div className="flex shrink-0 items-start gap-3 border-b border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" aria-hidden="true" />
+            <div className="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+              <span>Failed to load your session. {sessionError}</span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRetryKey((k) => k + 1)}
+                  className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                  Retry
+                </button>
+                <a
+                  href="/login"
+                  className="font-medium underline-offset-2 hover:underline"
+                >
+                  Go to sign in
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Mobile top bar — only visible on small screens. The sidebar
             is off-canvas there, so this gives the user a way to summon
             it (and a visible brand mark while they're at it). */}

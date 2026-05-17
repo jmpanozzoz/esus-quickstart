@@ -24,6 +24,7 @@ import {
   ChevronsUpDown,
   LayoutDashboard,
   LogOut,
+  ShieldCheck,
   Stethoscope,
   Users,
   X,
@@ -41,6 +42,7 @@ const NAV = [
   { href: "/encounters",    label: "Encounters",    icon: Activity },
   { href: "/patients",      label: "Patients",      icon: Users },
   { href: "/practitioners", label: "Practitioners", icon: Stethoscope },
+  { href: "/privacy",       label: "Privacy",       icon: ShieldCheck },
 ];
 
 const MY_PRACTICE_ENTRY = { href: "/my-practice", label: "My practice", icon: Stethoscope };

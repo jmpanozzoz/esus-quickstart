@@ -77,6 +77,7 @@ export async function middleware(req: NextRequest) {
       headers: {
         "Content-Type": "application/json",
         "X-App-Id": appId,
+        "X-Requested-With": "XMLHttpRequest",
       },
       body: JSON.stringify({ refreshToken }),
       cache: "no-store",
