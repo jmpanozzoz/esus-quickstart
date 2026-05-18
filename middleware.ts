@@ -77,6 +77,7 @@ export async function middleware(req: NextRequest) {
       headers: {
         "Content-Type": "application/json",
         "X-App-Id": appId,
+        "X-Requested-With": "XMLHttpRequest",
       },
       body: JSON.stringify({ refreshToken }),
       cache: "no-store",
@@ -120,5 +121,5 @@ export const config = {
   // Only run on authenticated surfaces. Auth pages (/, /signup, /login,
   // /verify) and the API routes don't need this middleware — they
   // either are the auth flow itself or run their own session check.
-  matcher: ["/dashboard/:path*", "/patients/:path*", "/practitioners/:path*", "/appointments/:path*", "/encounters/:path*", "/my-practice/:path*"],
+  matcher: ["/dashboard/:path*", "/patients/:path*", "/practitioners/:path*", "/appointments/:path*", "/encounters/:path*", "/my-practice/:path*", "/privacy/:path*", "/privacy", "/settings/:path*", "/settings"],
 };

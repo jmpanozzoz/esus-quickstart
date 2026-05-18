@@ -34,9 +34,13 @@ async function call<T>(path: string, init: RequestInit & { auth?: string } = {})
         "Copy .env.example to .env.local and fill in the values.",
     );
   }
+  const method = (init.method ?? "GET").toUpperCase();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "X-App-Id": APP_ID,
+    // CSRF mitigation: the API's CSRF plugin requires this header on all
+    // state-changing requests (POST/PUT/PATCH/DELETE) when using cookie auth.
+    ...(method !== "GET" && method !== "HEAD" ? { "X-Requested-With": "XMLHttpRequest" } : {}),
     ...(init.headers as Record<string, string> | undefined),
   };
   if (init.auth) headers["Authorization"] = `Bearer ${init.auth}`;
@@ -139,6 +143,17 @@ export function myObservations(accessToken: string): Promise<FhirBundle> {
   return call<FhirBundle>("/v1/auth/me/Observation", { auth: accessToken });
 }
 
+export function getMyConsents(accessToken: string): Promise<FhirBundle> {
+  return call<FhirBundle>("/v1/auth/me/Consent", { auth: accessToken });
+}
+
+export function revokeConsent(accessToken: string, consentId: string): Promise<void> {
+  return call<void>(`/v1/auth/me/consent/${consentId}/revoke`, {
+    method: "POST",
+    auth: accessToken,
+  });
+}
+
 // ── Server-admin: patient linking ────────────────────────────────────────────
 
 /**
@@ -146,6 +161,44 @@ export function myObservations(accessToken: string): Promise<FhirBundle> {
  * server-side route handler — uses the API key credentials from env vars,
  * which must never be exposed to the browser.
  */
+// ── Password reset (public endpoints, no auth needed) ───────────────────────
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  return call<void>("/v1/auth/password/reset/request", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function confirmPasswordReset(email: string, code: string, newPassword: string): Promise<void> {
+  return call<void>("/v1/auth/password/reset/confirm", {
+    method: "POST",
+    body: JSON.stringify({ email, code, newPassword }),
+  });
+}
+
+// ── Resend email verification ────────────────────────────────────────────────
+
+export async function resendVerification(email: string): Promise<void> {
+  return call<void>("/auth/resend-verification", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+/**
+ * Request permanent deletion of the authenticated user's account.
+ * Calls DELETE /v1/auth/me/account — the server will schedule deletion
+ * and invalidate all sessions. If the endpoint is not yet available,
+ * this throws and the caller should fall back to the support mailto.
+ */
+export async function deleteAccount(accessToken: string): Promise<void> {
+  return call<void>("/v1/auth/me/account", {
+    method: "DELETE",
+    auth: accessToken,
+  });
+}
+
 export async function linkUserToPatient(
   appUserId: string,
   patientId: string,

@@ -34,3 +34,50 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to load session" }, { status: 500 });
   }
 }
+
+export async function PATCH(req: Request) {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    let body: { firstName?: string; lastName?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    const API = process.env.ESUS_API_URL;
+    const APP_ID = process.env.ESUS_APP_ID;
+    if (!API || !APP_ID) {
+      return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+    }
+
+    const res = await fetch(`${API}/v1/auth/me/profile`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "X-App-Id": APP_ID,
+        "Authorization": `Bearer ${session.accessToken}`,
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => null);
+      return NextResponse.json(
+        { error: errBody?.message ?? "Profile update failed" },
+        { status: res.status },
+      );
+    }
+    const updated = await res.json();
+    return NextResponse.json(updated);
+  } catch (err) {
+    if (isApiError(err)) {
+      return NextResponse.json({ error: err.userMessage }, { status: err.status || 500 });
+    }
+    return NextResponse.json({ error: "Profile update failed" }, { status: 500 });
+  }
+}
