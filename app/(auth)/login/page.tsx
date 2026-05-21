@@ -8,6 +8,7 @@ import { Field, FormError, TextInput } from "@/app/_components/Field";
 
 const NOTICES: Record<string, string> = {
   already_verified: "Your email is already verified. Please log in.",
+  mfa_expired: "Your two-factor session expired. Please sign in again.",
 };
 
 function LoginForm() {
@@ -32,6 +33,11 @@ function LoginForm() {
       if (!res.ok) {
         const body = await res.json().catch(() => null);
         setError(body?.error ?? `Login failed (${res.status})`);
+        return;
+      }
+      const body = await res.json().catch(() => null);
+      if (body?.mfaRequired) {
+        router.push("/verify-mfa");
         return;
       }
       router.push("/dashboard");
