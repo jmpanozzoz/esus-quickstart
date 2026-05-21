@@ -26,9 +26,11 @@ export async function setTokens(accessToken: string, refreshToken: string, expir
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    // 30 days — matches Esus's default refresh TTL. A real app would
-    // refresh proactively before this expires.
-    maxAge: 60 * 60 * 24 * 30,
+    // 7 days. The API's refresh endpoint issues a new refresh token on
+    // every call (rotation), so an active user's window slides forward
+    // automatically. 7 days limits the blast radius of a stolen cookie
+    // compared to the API's maximum 30-day server-side TTL.
+    maxAge: 60 * 60 * 24 * 7,
   });
 }
 

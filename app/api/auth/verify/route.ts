@@ -1,6 +1,7 @@
 import { isApiError } from "@/lib/api-errors";
 import { linkUserToPatient, verifyEmail } from "@/lib/esus";
 import { fhirCreate, fhirUpdate } from "@/lib/fhir";
+import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 
 interface FhirPatient {
@@ -12,6 +13,15 @@ interface FhirPatient {
 export const runtime = "edge";
 
 export async function POST(req: Request) {
+  const ip = getRequestIp(req);
+  const rl = rateLimit(`verify:${ip}`, 5, 5 * 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Too many requests" }, {
+      status: 429,
+      headers: { "Retry-After": String(rl.retryAfter ?? 300) },
+    });
+  }
+
   let body: { email?: string; code?: string; appUserId?: string; firstName?: string; lastName?: string };
   try {
     body = await req.json();
