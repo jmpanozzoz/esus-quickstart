@@ -1,5 +1,6 @@
 import { Activity, Plus } from "lucide-react";
 import Link from "next/link";
+import { fhirScopeFor, requireSession } from "@/lib/auth";
 import { entries, fhirSearch } from "@/lib/fhir";
 import { codeableText, type Observation, observationStatusBadge, observationValue } from "@/lib/fhir-clinical";
 import { formatDateTime } from "@/lib/fhir-appointment";
@@ -7,12 +8,17 @@ import { formatDateTime } from "@/lib/fhir-appointment";
 export const runtime = "edge";
 
 export default async function ObservationsPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await requireSession();
   const { id } = await params;
-  const bundle = await fhirSearch<Observation>("Observation", {
-    subject: id,
-    _count: 50,
-    _sort: "-_lastUpdated",
-  });
+  const bundle = await fhirSearch<Observation>(
+    "Observation",
+    {
+      subject: id,
+      _count: 50,
+      _sort: "-_lastUpdated",
+    },
+    fhirScopeFor(session),
+  );
   const rows = entries(bundle);
 
   return (

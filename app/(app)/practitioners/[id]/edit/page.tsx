@@ -1,5 +1,6 @@
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { fhirScopeFor, requireSession } from "@/lib/auth";
 import { type FhirResource, fhirRead } from "@/lib/fhir";
 import { PractitionerForm, type PractitionerFormState } from "../../new/PractitionerForm";
 
@@ -39,8 +40,9 @@ function buildInitial(p: Practitioner): Partial<PractitionerFormState> {
 }
 
 export default async function EditPractitionerPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await requireSession();
   const { id } = await params;
-  const practitioner = await fhirRead<Practitioner>("Practitioner", id);
+  const practitioner = await fhirRead<Practitioner>("Practitioner", id, fhirScopeFor(session));
 
   return (
     <div className="space-y-6">

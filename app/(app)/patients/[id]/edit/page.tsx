@@ -1,5 +1,6 @@
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { fhirScopeFor, requireSession } from "@/lib/auth";
 import { type FhirResource, fhirRead } from "@/lib/fhir";
 import { PatientForm, type PatientFormState } from "../../new/PatientForm";
 
@@ -49,8 +50,9 @@ function buildInitial(p: Patient): Partial<PatientFormState> {
 }
 
 export default async function EditPatientPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await requireSession();
   const { id } = await params;
-  const patient = await fhirRead<Patient>("Patient", id);
+  const patient = await fhirRead<Patient>("Patient", id, fhirScopeFor(session));
 
   return (
     <div className="space-y-6">

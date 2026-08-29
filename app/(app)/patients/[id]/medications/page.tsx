@@ -1,5 +1,6 @@
 import { Pill, Plus } from "lucide-react";
 import Link from "next/link";
+import { fhirScopeFor, requireSession } from "@/lib/auth";
 import { entries, fhirSearch } from "@/lib/fhir";
 import { type MedicationRequest, medicationDisplay, medicationStatusBadge } from "@/lib/fhir-clinical";
 import { formatDate } from "@/lib/fhir-helpers";
@@ -7,12 +8,17 @@ import { formatDate } from "@/lib/fhir-helpers";
 export const runtime = "edge";
 
 export default async function MedicationsPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await requireSession();
   const { id } = await params;
-  const bundle = await fhirSearch<MedicationRequest>("MedicationRequest", {
-    subject: id,
-    _count: 50,
-    _sort: "-_lastUpdated",
-  });
+  const bundle = await fhirSearch<MedicationRequest>(
+    "MedicationRequest",
+    {
+      subject: id,
+      _count: 50,
+      _sort: "-_lastUpdated",
+    },
+    fhirScopeFor(session),
+  );
   const rows = entries(bundle);
 
   return (

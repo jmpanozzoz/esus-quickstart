@@ -1,3 +1,4 @@
+import { fhirScopeFor, requireSession } from "@/lib/auth";
 import { fhirRead } from "@/lib/fhir";
 import {
   formatAddress,
@@ -26,8 +27,9 @@ interface Patient {
 }
 
 export default async function PatientOverviewPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await requireSession();
   const { id } = await params;
-  const patient = await fhirRead<Patient>("Patient", id);
+  const patient = await fhirRead<Patient>("Patient", id, fhirScopeFor(session));
 
   const phones = (patient.telecom ?? []).filter((t) => t.system === "phone");
   const emails = (patient.telecom ?? []).filter((t) => t.system === "email");

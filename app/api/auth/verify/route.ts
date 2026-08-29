@@ -28,6 +28,12 @@ export async function POST(req: Request) {
     // Auto-link: if appUserId was provided at signup, create a FHIR Patient
     // and link the app user to it. This ensures the FHIR proxy enforces
     // patient scoping from the very first authenticated request.
+    //
+    // The three FHIR calls below are deliberately UNSCOPED (no
+    // `fhirScopeFor`): this runs during verification, before a session
+    // exists, and it is provisioning the very patient record the scope
+    // would key on. Everywhere else — the proxy routes and every server
+    // component — must pass a scope; see `fhirScopeFor` in `lib/auth.ts`.
     if (body.appUserId) {
       try {
         const patient = await fhirCreate<FhirPatient>("Patient", {

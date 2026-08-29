@@ -7,6 +7,7 @@
 import { ChevronLeft, Mail, MapPin, Pencil, Phone } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { fhirScopeFor, requireSession } from "@/lib/auth";
 import { type FhirError, fhirRead } from "@/lib/fhir";
 import {
   ageFromBirthDate,
@@ -46,10 +47,11 @@ export default async function PatientLayout({
   children: ReactNode;
   params: Promise<{ id: string }>;
 }) {
+  const session = await requireSession();
   const { id } = await params;
   let patient: Patient;
   try {
-    patient = await fhirRead<Patient>("Patient", id);
+    patient = await fhirRead<Patient>("Patient", id, fhirScopeFor(session));
   } catch (err) {
     const e = err as FhirError;
     if (e.status === 404) notFound();
