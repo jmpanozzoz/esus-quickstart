@@ -25,18 +25,22 @@ function asObj(req: Request): Record<string, string> {
 
 function errResponse(err: unknown) {
   if (isApiError(err)) {
-    // Forward the FHIR `OperationOutcome` verbatim when present so the
-    // SWR client-side fetcher can parse the same `diagnostics` /
-    // `expression` fields it normally would. Status mirrors the upstream.
-    //
-    // For 403s, also surface `diagnostic` at the top level so developers
-    // inspecting the raw response body immediately see the patient-scope
-    // reason (e.g. "Patient-scoped token: access restricted to the linked
-    // patient") instead of having to drill into issue[0].diagnostics.
+    // 403: return a generic OperationOutcome — never forward the upstream
+    // diagnostic which can contain patient IDs or scope details
+    // (e.g. "Patient-scoped token: access restricted to patient <id>").
+    // Client UI only needs the forbidden status; the specific reason is
+    // logged server-side by the API.
+    if (err.status === 403) {
+      return NextResponse.json(
+        { resourceType: "OperationOutcome", issue: [{ severity: "error", code: "forbidden", diagnostics: "Access denied" }] },
+        { status: 403 },
+      );
+    }
+    // Forward the FHIR OperationOutcome verbatim for all other errors so
+    // the client-side fetcher can parse diagnostics / expression fields.
     const body =
       err.outcome ?? { resourceType: "OperationOutcome", issue: [{ severity: "error", diagnostics: err.userMessage }] };
-    const extra = err.status === 403 && err.diagnostic ? { diagnostic: err.diagnostic } : {};
-    return NextResponse.json({ ...body, ...extra }, { status: err.status || 500 });
+    return NextResponse.json(body, { status: err.status || 500 });
   }
   return NextResponse.json({ error: "fhir request failed" }, { status: 500 });
 }

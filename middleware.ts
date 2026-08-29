@@ -107,7 +107,7 @@ export async function middleware(req: NextRequest) {
       sameSite: "lax",
       secure,
       path: "/",
-      maxAge: 60 * 60 * 24 * 30,
+      maxAge: 60 * 60 * 24 * 7, // 7 days — matches session.ts
     });
     return out;
   } catch {
@@ -118,8 +118,15 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Only run on authenticated surfaces. Auth pages (/, /signup, /login,
-  // /verify) and the API routes don't need this middleware — they
-  // either are the auth flow itself or run their own session check.
-  matcher: ["/dashboard/:path*", "/patients/:path*", "/practitioners/:path*", "/appointments/:path*", "/encounters/:path*", "/my-practice/:path*", "/privacy/:path*", "/privacy", "/settings/:path*", "/settings"],
+  // Protect every route by default. Explicitly exempt:
+  //   • Next.js internals (_next/*)
+  //   • Static assets (favicon.ico, images)
+  //   • Auth pages (login, signup, verify, forgot-password, reset-password)
+  //   • API routes — each handler runs its own session check via requireSession()
+  //
+  // Inverting the matcher (exclusion-list instead of inclusion-list) means any
+  // new authenticated route is protected automatically without updating this file.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon\\.ico|login|signup|verify|verify-mfa|forgot-password|reset-password|api/).*)",
+  ],
 };

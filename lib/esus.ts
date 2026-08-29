@@ -91,10 +91,23 @@ export interface TokenResponse {
   tokenType: "Bearer";
 }
 
-export function login(email: string, password: string): Promise<TokenResponse> {
-  return call<TokenResponse>("/v1/auth/login", {
+export interface MfaChallengeResponse {
+  mfaRequired: true;
+  mfaToken: string;
+  expiresIn: number;
+}
+
+export function login(email: string, password: string): Promise<TokenResponse | MfaChallengeResponse> {
+  return call<TokenResponse | MfaChallengeResponse>("/v1/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
+  });
+}
+
+export function mfaVerify(mfaToken: string, code: string): Promise<TokenResponse> {
+  return call<TokenResponse>("/v1/auth/mfa/verify", {
+    method: "POST",
+    body: JSON.stringify({ mfaToken, code }),
   });
 }
 

@@ -10,6 +10,8 @@ import {
   type ContactPoint,
   type Identifier,
 } from "@/lib/fhir-helpers";
+import { isStaffUser } from "@/lib/store";
+import { notFound } from "next/navigation";
 
 export const runtime = "edge";
 
@@ -29,6 +31,22 @@ interface Patient {
 export default async function PatientOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
   const { id } = await params;
+
+  // Redundant IDOR guard — defense in depth alongside the API's patient-scope
+  // enforcement. Non-staff users are scoped to their own linked patient; if
+  // the requested id doesn't match, return 404 (not 403) to avoid confirming
+  // whether a different patient record exists at all.
+  //
+  // The guard is unconditional because `requireSession()` above already
+  // failed closed: there is always a validated session here. Keying it off a
+  // non-redirecting `getSession()` would skip the check whenever the session
+  // is absent or invalid — exactly the case that needs it most.
+  if (!isStaffUser(session.user)) {
+    if (!session.user.patientId || session.user.patientId !== id) {
+      notFound();
+    }
+  }
+
   const patient = await fhirRead<Patient>("Patient", id, fhirScopeFor(session));
 
   const phones = (patient.telecom ?? []).filter((t) => t.system === "phone");

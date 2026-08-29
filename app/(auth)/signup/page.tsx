@@ -4,7 +4,26 @@ import { AlertCircle, ArrowRight, Lock, MailCheck, UserCheck } from "lucide-reac
 import { Field, FormError, TextInput } from "@/app/_components/Field";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (
+        container: HTMLElement,
+        options: {
+          sitekey: string;
+          callback: (token: string) => void;
+          "expired-callback": () => void;
+          "error-callback": () => void;
+        },
+      ) => string;
+      reset: (widgetId: string) => void;
+    };
+  }
+}
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 interface InviteInfo {
   email: string;
@@ -22,6 +41,9 @@ function SignupForm() {
   const [lastName, setLastName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const turnstileWidgetId = useRef<string | null>(null);
 
   // Invite state
   const [inviteToken, setInviteToken] = useState<string | null>(null);
@@ -62,6 +84,10 @@ function SignupForm() {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      setError("Please complete the CAPTCHA challenge.");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/auth/signup", {
@@ -73,6 +99,7 @@ function SignupForm() {
           ...(firstName.trim() ? { firstName: firstName.trim() } : {}),
           ...(lastName.trim() ? { lastName: lastName.trim() } : {}),
           ...(inviteToken && inviteValid ? { inviteToken } : {}),
+          ...(turnstileToken ? { turnstileToken } : {}),
         }),
       });
       if (!res.ok) {
@@ -108,6 +135,30 @@ function SignupForm() {
       setLoading(false);
     }
   }
+
+  // Load and render Turnstile widget when the site key is configured.
+  useEffect(() => {
+    if (!TURNSTILE_SITE_KEY || !turnstileRef.current) return;
+    const renderWidget = () => {
+      if (!window.turnstile || !turnstileRef.current) return;
+      turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        callback: (token) => setTurnstileToken(token),
+        "expired-callback": () => setTurnstileToken(""),
+        "error-callback": () => setTurnstileToken(""),
+      });
+    };
+    const existing = document.getElementById("cf-turnstile-script");
+    if (existing) {
+      renderWidget();
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = "cf-turnstile-script";
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.onload = renderWidget;
+    document.head.appendChild(script);
+  }, []);
 
   // Determine if we're in an invite flow that is still loading
   const isInviteLoading = inviteToken !== null && inviteValid === null;
@@ -229,11 +280,15 @@ function SignupForm() {
           />
         </Field>
 
+        {TURNSTILE_SITE_KEY && (
+          <div ref={turnstileRef} className="flex justify-center" />
+        )}
+
         {error && <FormError>{error}</FormError>}
 
         <button
           type="submit"
-          disabled={loading || isInviteLoading}
+          disabled={loading || isInviteLoading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
           className="group inline-flex w-full items-center justify-between rounded-xl bg-brand-600 px-4 py-3 text-sm font-medium text-white shadow-card transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-300"
         >
           <span>{loading ? "Creating…" : "Create account"}</span>
