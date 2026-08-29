@@ -1,5 +1,6 @@
 import { ClipboardList, Plus } from "lucide-react";
 import Link from "next/link";
+import { fhirScopeFor, requireSession } from "@/lib/auth";
 import { entries, fhirSearch } from "@/lib/fhir";
 import {
   codeableText,
@@ -11,12 +12,17 @@ import { formatDate } from "@/lib/fhir-helpers";
 export const runtime = "edge";
 
 export default async function ConditionsPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await requireSession();
   const { id } = await params;
-  const bundle = await fhirSearch<Condition>("Condition", {
-    subject: id,
-    _count: 50,
-    _sort: "-_lastUpdated",
-  });
+  const bundle = await fhirSearch<Condition>(
+    "Condition",
+    {
+      subject: id,
+      _count: 50,
+      _sort: "-_lastUpdated",
+    },
+    fhirScopeFor(session),
+  );
   const rows = entries(bundle);
 
   return (

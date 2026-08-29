@@ -9,14 +9,14 @@
  * match it.
  */
 import { isApiError } from "@/lib/api-errors";
-import { requireSession } from "@/lib/auth";
+import { fhirScopeFor, requireSession } from "@/lib/auth";
 import { fhirBatch, type BatchRequest } from "@/lib/fhir";
 import { NextResponse } from "next/server";
 
 export const runtime = "edge";
 
 export async function POST(req: Request) {
-  await requireSession();
+  const session = await requireSession();
   let body: unknown;
   try {
     body = await req.json();
@@ -35,7 +35,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Expected { requests: BatchRequest[] }" }, { status: 400 });
   }
   try {
-    const bundle = await fhirBatch(requests);
+    // Scope every sub-request to the caller. A batch is a normal FHIR call
+    // as far as the API is concerned: without `X-App-User-Id` the whole
+    // bundle would run with full-tenant privilege.
+    const bundle = await fhirBatch(requests, fhirScopeFor(session));
     return NextResponse.json(bundle);
   } catch (err) {
     if (isApiError(err)) {

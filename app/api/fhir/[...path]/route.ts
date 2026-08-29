@@ -7,7 +7,7 @@
  * tab can't use the proxy as an open relay against your tenant data.
  */
 import { isApiError } from "@/lib/api-errors";
-import { requireSession } from "@/lib/auth";
+import { fhirScopeFor, requireSession } from "@/lib/auth";
 import { isStaffUser } from "@/lib/store";
 import { fhirCreate, fhirDelete, fhirPatch, fhirRead, fhirSearch, fhirUpdate } from "@/lib/fhir";
 import { NextResponse } from "next/server";
@@ -49,17 +49,22 @@ export async function GET(req: Request, ctx: Ctx) {
   const session = await requireSession();
   const { path } = await ctx.params;
   const [resourceType, id] = path;
-  // Staff users (isStaff role or practitionerId) access multiple patients via
-  // clinical consent — do NOT send X-App-User-Id or they'd be scoped to their
-  // own patient record instead of the full org.
-  const isStaff = isStaffUser(session.user);
-  const opts = !isStaff && session.user.patientId ? { appUserId: session.user.id } : undefined;
+  const opts = fhirScopeFor(session);
   try {
     let params = asObj(req);
     // For Patient searches without an explicit _id filter, scope to the session
     // user's own patient so the API's patient-scope guard doesn't 403 the request.
-    if (resourceType === "Patient" && !id && opts && !params._id && !params.id) {
-      params = { ...params, _id: session.user.patientId! };
+    // Staff read across the org, so this convenience only applies to a non-staff
+    // user who actually has a linked patient record.
+    if (
+      resourceType === "Patient" &&
+      !id &&
+      !isStaffUser(session.user) &&
+      session.user.patientId &&
+      !params._id &&
+      !params.id
+    ) {
+      params = { ...params, _id: session.user.patientId };
     }
     const data = id
       ? await fhirRead(resourceType, id, opts)
@@ -71,12 +76,12 @@ export async function GET(req: Request, ctx: Ctx) {
 }
 
 export async function POST(req: Request, ctx: Ctx) {
-  await requireSession();
+  const session = await requireSession();
   const { path } = await ctx.params;
   const [resourceType] = path;
   try {
     const body = await req.json();
-    const data = await fhirCreate(resourceType, body);
+    const data = await fhirCreate(resourceType, body, fhirScopeFor(session));
     return NextResponse.json(data, { status: 201 });
   } catch (err) {
     return errResponse(err);
@@ -84,12 +89,12 @@ export async function POST(req: Request, ctx: Ctx) {
 }
 
 export async function PUT(req: Request, ctx: Ctx) {
-  await requireSession();
+  const session = await requireSession();
   const { path } = await ctx.params;
   const [resourceType, id] = path;
   try {
     const body = await req.json();
-    const data = await fhirUpdate(resourceType, id, body);
+    const data = await fhirUpdate(resourceType, id, body, fhirScopeFor(session));
     return NextResponse.json(data);
   } catch (err) {
     return errResponse(err);
@@ -97,12 +102,12 @@ export async function PUT(req: Request, ctx: Ctx) {
 }
 
 export async function PATCH(req: Request, ctx: Ctx) {
-  await requireSession();
+  const session = await requireSession();
   const { path } = await ctx.params;
   const [resourceType, id] = path;
   try {
     const body = await req.json();
-    const data = await fhirPatch(resourceType, id, body);
+    const data = await fhirPatch(resourceType, id, body, fhirScopeFor(session));
     return NextResponse.json(data);
   } catch (err) {
     return errResponse(err);
@@ -110,11 +115,11 @@ export async function PATCH(req: Request, ctx: Ctx) {
 }
 
 export async function DELETE(_req: Request, ctx: Ctx) {
-  await requireSession();
+  const session = await requireSession();
   const { path } = await ctx.params;
   const [resourceType, id] = path;
   try {
-    await fhirDelete(resourceType, id);
+    await fhirDelete(resourceType, id, fhirScopeFor(session));
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     return errResponse(err);

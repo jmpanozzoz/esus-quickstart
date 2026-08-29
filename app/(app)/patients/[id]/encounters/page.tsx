@@ -1,5 +1,6 @@
 import { Activity } from "lucide-react";
 import Link from "next/link";
+import { fhirScopeFor, requireSession } from "@/lib/auth";
 import { entries, fhirSearch } from "@/lib/fhir";
 import { type Encounter, classLabel, encounterStatusBadge } from "@/lib/fhir-encounter";
 import { formatDateTime } from "@/lib/fhir-appointment";
@@ -7,12 +8,17 @@ import { formatDateTime } from "@/lib/fhir-appointment";
 export const runtime = "edge";
 
 export default async function PatientEncountersPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await requireSession();
   const { id } = await params;
-  const bundle = await fhirSearch<Encounter>("Encounter", {
-    subject: id,
-    _count: 50,
-    _sort: "-_lastUpdated",
-  });
+  const bundle = await fhirSearch<Encounter>(
+    "Encounter",
+    {
+      subject: id,
+      _count: 50,
+      _sort: "-_lastUpdated",
+    },
+    fhirScopeFor(session),
+  );
   const rows = entries(bundle);
 
   if (rows.length === 0) {
