@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Field, FormError, TextInput } from "@/app/_components/Field";
+import { safeRedirectPath } from "@/lib/safe-redirect";
 
 const NOTICES: Record<string, string> = {
   already_verified: "Your email is already verified. Please log in.",
@@ -40,7 +41,12 @@ function LoginForm() {
         router.push("/verify-mfa");
         return;
       }
-      router.push("/dashboard");
+      // The middleware and the app shell both append `?next=` when they
+      // bounce someone here. It was built and never read, so a user always
+      // landed on /dashboard — and the parameter sat there as an
+      // open-redirect waiting for whoever wired it up. Read it through the
+      // allowlist so it does its job and can only ever name a local path.
+      router.push(safeRedirectPath(params.get("next"), "/dashboard"));
     } finally {
       setLoading(false);
     }

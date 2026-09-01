@@ -77,7 +77,16 @@ export function signup(body: SignupBody, turnstileToken?: string): Promise<Signu
   return call<SignupResult>("/v1/auth/signup", { method: "POST", body: JSON.stringify(body), headers });
 }
 
-export function verifyEmail(email: string, code: string): Promise<{ success: true }> {
+/**
+ * Verifies an email with its OTP and returns WHO was verified.
+ *
+ * `userId` is the only trustworthy source of an app-user id at this point
+ * in the flow: it comes from the API, which resolved it from the address
+ * whose OTP the caller just proved possession of. It is optional in the
+ * type because an API deployed before this field existed omits it — the
+ * caller must degrade rather than fall back to a client-supplied id.
+ */
+export function verifyEmail(email: string, code: string): Promise<{ success: true; userId?: string }> {
   return call("/v1/auth/email/verify", {
     method: "POST",
     body: JSON.stringify({ email, code }),

@@ -5,42 +5,41 @@
  * cookie rides on top-level navigations from your domain.
  *
  * The names are deliberately scoped (`esus_access`, `esus_refresh`)
- * to avoid collisions with the host app's own auth.
+ * to avoid collisions with the host app's own auth, and carry the
+ * `__Host-` prefix in production — see `lib/cookies.ts`.
  */
 import { cookies } from "next/headers";
-
-const ACCESS_COOKIE = "esus_access";
-const REFRESH_COOKIE = "esus_refresh";
+import {
+  ACCESS_COOKIE,
+  ACCESS_COOKIE_NAMES,
+  COOKIE_BASE,
+  REFRESH_COOKIE,
+  REFRESH_COOKIE_NAMES,
+  REFRESH_MAX_AGE,
+} from "./cookies";
 
 export async function setTokens(accessToken: string, refreshToken: string, expiresIn: number): Promise<void> {
   const jar = await cookies();
-  jar.set(ACCESS_COOKIE, accessToken, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: expiresIn,
-  });
-  jar.set(REFRESH_COOKIE, refreshToken, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    // 7 days. The API's refresh endpoint issues a new refresh token on
-    // every call (rotation), so an active user's window slides forward
-    // automatically. 7 days limits the blast radius of a stolen cookie
-    // compared to the API's maximum 30-day server-side TTL.
-    maxAge: 60 * 60 * 24 * 7,
-  });
+  jar.set(ACCESS_COOKIE, accessToken, { ...COOKIE_BASE, maxAge: expiresIn });
+  // The API's refresh endpoint issues a new refresh token on every call
+  // (rotation), so an active user's window slides forward automatically.
+  // 7 days limits the blast radius of a stolen cookie compared to the
+  // API's maximum 30-day server-side TTL.
+  jar.set(REFRESH_COOKIE, refreshToken, { ...COOKIE_BASE, maxAge: REFRESH_MAX_AGE });
 }
 
 export async function clearTokens(): Promise<void> {
   const jar = await cookies();
-  jar.delete(ACCESS_COOKIE);
-  jar.delete(REFRESH_COOKIE);
+  // Clear every name, prefixed and bare — a logout that leaves the legacy
+  // cookie behind leaves a working session behind.
+  for (const name of [...ACCESS_COOKIE_NAMES, ...REFRESH_COOKIE_NAMES]) jar.delete(name);
 }
 
 export async function getAccessToken(): Promise<string | null> {
   const jar = await cookies();
-  return jar.get(ACCESS_COOKIE)?.value ?? null;
+  for (const name of ACCESS_COOKIE_NAMES) {
+    const value = jar.get(name)?.value;
+    if (value) return value;
+  }
+  return null;
 }

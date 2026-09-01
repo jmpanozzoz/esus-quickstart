@@ -32,9 +32,23 @@
  *  the route handler / server component runs.
  */
 import { type NextRequest, NextResponse } from "next/server";
+import {
+  ACCESS_COOKIE,
+  ACCESS_COOKIE_NAMES,
+  COOKIE_BASE,
+  REFRESH_COOKIE,
+  REFRESH_COOKIE_NAMES,
+  REFRESH_MAX_AGE,
+} from "./lib/cookies";
 
-const ACCESS = "esus_access";
-const REFRESH = "esus_refresh";
+/** First value present among the accepted names (prefixed, then bare). */
+function readCookie(req: NextRequest, names: readonly string[]): string | undefined {
+  for (const name of names) {
+    const value = req.cookies.get(name)?.value;
+    if (value) return value;
+  }
+  return undefined;
+}
 
 function loginRedirect(req: NextRequest, clearCookies = false): NextResponse {
   const url = req.nextUrl.clone();
@@ -44,15 +58,62 @@ function loginRedirect(req: NextRequest, clearCookies = false): NextResponse {
   url.search = nextParam && nextParam !== "/login" ? `?next=${encodeURIComponent(nextParam)}` : "";
   const out = NextResponse.redirect(url);
   if (clearCookies) {
-    out.cookies.delete(ACCESS);
-    out.cookies.delete(REFRESH);
+    for (const name of [...ACCESS_COOKIE_NAMES, ...REFRESH_COOKIE_NAMES]) out.cookies.delete(name);
   }
   return out;
 }
 
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/**
+ * Rejects a state-changing request whose `Origin` names another site.
+ *
+ * `SameSite=Lax` already stops the classic cross-site POST, and it stays the
+ * primary defence — this is the second layer it never had. It catches the
+ * cases Lax does not: a sibling subdomain (same site, different origin) and
+ * browsers that mishandle the attribute.
+ *
+ * Only a PRESENT and mismatched Origin is refused. Browsers always send it
+ * on a state-changing request, so CSRF is covered; a server-to-server or
+ * curl caller sends none and is left alone, which is what keeps this from
+ * breaking every non-browser client of the proxy.
+ *
+ * The comparison is on HOST, and accepts the `Host` header as well as
+ * `nextUrl`. Behind a proxy — this deploys to Cloudflare Workers — the two
+ * can legitimately disagree on scheme or on the internal hostname, and a
+ * false positive here does not degrade anything: it makes every login a 403.
+ */
+function crossOriginRefusal(req: NextRequest): NextResponse | null {
+  if (SAFE_METHODS.has(req.method)) return null;
+  const origin = req.headers.get("origin");
+  if (!origin) return null;
+
+  let originHost: string;
+  try {
+    originHost = new URL(origin).host;
+  } catch {
+    // A malformed Origin is not something a browser sends.
+    return NextResponse.json({ error: "Cross-origin request refused" }, { status: 403 });
+  }
+
+  const selfHosts = [req.nextUrl.host, req.headers.get("host")].filter(Boolean);
+  if (selfHosts.includes(originHost)) return null;
+
+  return NextResponse.json({ error: "Cross-origin request refused" }, { status: 403 });
+}
+
 export async function middleware(req: NextRequest) {
-  const access = req.cookies.get(ACCESS)?.value;
-  const refreshToken = req.cookies.get(REFRESH)?.value;
+  // API routes are exempt from the auth gate — each handler runs its own
+  // `requireSession()` — but not from the CSRF check.
+  if (req.nextUrl.pathname.startsWith("/api/")) {
+    return crossOriginRefusal(req) ?? NextResponse.next();
+  }
+
+  const refusal = crossOriginRefusal(req);
+  if (refusal) return refusal;
+
+  const access = readCookie(req, ACCESS_COOKIE_NAMES);
+  const refreshToken = readCookie(req, REFRESH_COOKIE_NAMES);
 
   // Both cookies absent → unauthenticated; bounce to /login at the
   // edge before any HTML renders.
@@ -94,21 +155,14 @@ export async function middleware(req: NextRequest) {
       expiresIn: number;
     };
     const out = NextResponse.next();
-    const secure = process.env.NODE_ENV === "production";
-    out.cookies.set(ACCESS, tokens.accessToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure,
-      path: "/",
-      maxAge: tokens.expiresIn,
-    });
-    out.cookies.set(REFRESH, tokens.refreshToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure,
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 days — matches session.ts
-    });
+    out.cookies.set(ACCESS_COOKIE, tokens.accessToken, { ...COOKIE_BASE, maxAge: tokens.expiresIn });
+    out.cookies.set(REFRESH_COOKIE, tokens.refreshToken, { ...COOKIE_BASE, maxAge: REFRESH_MAX_AGE });
+    // A refresh that ran while the browser still held the pre-`__Host-`
+    // cookies would otherwise leave both pairs in the jar, and the stale
+    // one can win the next read.
+    for (const name of [...ACCESS_COOKIE_NAMES, ...REFRESH_COOKIE_NAMES]) {
+      if (name !== ACCESS_COOKIE && name !== REFRESH_COOKIE) out.cookies.delete(name);
+    }
     return out;
   } catch {
     // Network blip — let the request through. The client-side
@@ -126,7 +180,14 @@ export const config = {
   //
   // Inverting the matcher (exclusion-list instead of inclusion-list) means any
   // new authenticated route is protected automatically without updating this file.
+  // Each exemption is anchored to a path-segment boundary — `(?:/|$)`.
+  // Without it the alternation matched by PREFIX, so a future route like
+  // `/verify-payment` or `/signup-complete` would inherit the exemption of
+  // `/verify` / `/signup` and ship unauthenticated.
   matcher: [
-    "/((?!_next/static|_next/image|favicon\\.ico|login|signup|verify|verify-mfa|forgot-password|reset-password|api/).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|(?:login|signup|verify|verify-mfa|forgot-password|reset-password)(?:/|$)|api/).*)",
+    // `/api/*` is matched separately: the auth gate skips it, the
+    // cross-origin check does not.
+    "/api/:path*",
   ],
 };
