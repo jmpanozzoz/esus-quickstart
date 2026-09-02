@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     });
   }
 
-  let body: { email?: string; code?: string; appUserId?: string; firstName?: string; lastName?: string };
+  let body: { email?: string; code?: string; firstName?: string; lastName?: string };
   try {
     body = await req.json();
   } catch {
@@ -33,24 +33,33 @@ export async function POST(req: Request) {
   }
 
   try {
-    await verifyEmail(body.email, body.code);
+    const verified = await verifyEmail(body.email, body.code);
 
-    // Auto-link: if appUserId was provided at signup, create a FHIR Patient
-    // and link the app user to it. This ensures the FHIR proxy enforces
-    // patient scoping from the very first authenticated request.
+    // Auto-link: create a FHIR Patient and link the app user to it. This
+    // ensures the FHIR proxy enforces patient scoping from the very first
+    // authenticated request.
+    //
+    // The id comes from the verification RESULT. It used to come from
+    // `body.appUserId`, which nothing tied to the address being verified:
+    // anyone could verify their own email while passing a stranger's id and
+    // have that account re-linked to a Patient of this request's making. An
+    // API too old to return `userId` simply skips the link — the same
+    // already-tolerated outcome as a failed link, and never a reason to
+    // trust the body again.
+    const appUserId = verified.userId;
     //
     // The three FHIR calls below are deliberately UNSCOPED (no
     // `fhirScopeFor`): this runs during verification, before a session
     // exists, and it is provisioning the very patient record the scope
     // would key on. Everywhere else — the proxy routes and every server
     // component — must pass a scope; see `fhirScopeFor` in `lib/auth.ts`.
-    if (body.appUserId) {
+    if (appUserId) {
       try {
         const patient = await fhirCreate<FhirPatient>("Patient", {
           resourceType: "Patient",
         });
         if (patient.id) {
-          await linkUserToPatient(body.appUserId, patient.id);
+          await linkUserToPatient(appUserId, patient.id);
 
           // Patch the Patient with the user's name so the EHR shows a real
           // name instead of "Unknown".

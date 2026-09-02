@@ -13,7 +13,6 @@ function VerifyForm() {
   const router = useRouter();
   const params = useSearchParams();
   const initialEmail = params.get("email") ?? "";
-  const appUserId = params.get("appUserId") ?? "";
   const firstName = params.get("firstName") ?? "";
   const lastName = params.get("lastName") ?? "";
 
@@ -103,7 +102,6 @@ function VerifyForm() {
         body: JSON.stringify({
           email,
           code,
-          appUserId: appUserId || undefined,
           firstName: firstName || undefined,
           lastName: lastName || undefined,
         }),

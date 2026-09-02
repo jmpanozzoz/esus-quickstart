@@ -114,7 +114,6 @@ function SignupForm() {
         return;
       }
       const result = await res.json().catch(() => null);
-      const appUserId: string | undefined = result?.appUserId;
       const emailVerificationRequired: boolean = result?.emailVerificationRequired ?? true;
 
       // Invite signup: email is already verified (token proves inbox access).
@@ -124,10 +123,13 @@ function SignupForm() {
         return;
       }
 
-      // Normal signup: collect the 6-digit OTP on /verify.
+      // Normal signup: collect the 6-digit OTP on /verify. The app-user id
+      // is deliberately NOT carried in the URL any more: the verify route
+      // takes it from the API's verification response (N11), and an id in a
+      // query string ends up in history, referrers and access logs for
+      // nothing.
       const verifyUrl =
         `/verify?email=${encodeURIComponent(email)}` +
-        (appUserId ? `&appUserId=${encodeURIComponent(appUserId)}` : "") +
         (firstName.trim() ? `&firstName=${encodeURIComponent(firstName.trim())}` : "") +
         (lastName.trim() ? `&lastName=${encodeURIComponent(lastName.trim())}` : "");
       router.push(verifyUrl);
